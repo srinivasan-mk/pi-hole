@@ -1,0 +1,14 @@
+[Unit]
+Description=Pi-hole Cloud Lists & Gravity Updater
+After=network-online.target pihole-FTL.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/pihole-cloud-updater
+StandardOutput=journal
+StandardError=journal
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

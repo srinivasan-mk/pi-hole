@@ -1,0 +1,115 @@
+; ==============================================================================
+; Pi-hole Cloud Updater Configuration
+; https://github.com/srinivasan-mk/pi-hole
+; ==============================================================================
+; Compatible with pihole-updatelists configurations, plus native support for:
+;   - Lists of Lists ("listsoflist") with recursive expansion
+;   - Google Sheets (URL or gsheet:// with tab/gid and column selection)
+;   - SQLite databases stored in Google Drive or local cloud-synced folders
+; ==============================================================================
+
+; Path to Pi-hole's gravity SQLite database
+GRAVITY_DB="/etc/pihole/gravity.db"
+
+; Target group IDs (default is 0 for Pi-hole's Default Group)
+ADLISTS_GROUP_ID=0
+DOMAINS_GROUP_ID=0
+
+; Identification comment added to managed entries in gravity.db
+COMMENT="Managed by pihole-cloud-updater"
+
+; Only modify/delete entries that match COMMENT (prevents touching manual web UI entries)
+REQUIRE_COMMENT=true
+
+; Delete obsolete entries from database (true) or simply disable them (false)
+DELETE_OBSOLETE=true
+
+; Automatically run 'pihole -g' or reload DNS when lists change
+UPDATE_GRAVITY=true
+
+; Vacuum database after update to reclaim space
+VACUUM_DATABASE=false
+
+; Cache directory for downloaded cloud databases and temporary lists
+CACHE_DIR="/var/cache/pihole-cloud-updater"
+
+; Maximum recursion depth for nested Lists of Lists (default: 2)
+MAX_RECURSION_DEPTH=2
+
+; HTTP request timeout in seconds
+REQUEST_TIMEOUT=30
+
+; ------------------------------------------------------------------------------
+; 1. BLOCKLISTS (Lists of Lists / Adlists)
+; ------------------------------------------------------------------------------
+; URLs or local files containing URLs to adlists.
+; Supports:
+;   - Standard remote lists-of-lists (Firebog, Steve Jenkins, etc.)
+;   - Local file lists (/etc/pihole/custom-blocklists.list)
+;   - Google Sheets URLs (auto-converted to CSV export)
+;   - Multiple URLs separated by space or newlines
+BLOCKLISTS_URL="https://v.firebog.net/hosts/lists.php?type=tick
+https://raw.githubusercontent.com/stevejenkins/pi-hole-lists/main/blocklists.txt
+/etc/pihole/custom-blocklists.list"
+
+; Dedicated Google Sheets sources for blocklists
+; Format: URL [| column_name_or_index]
+; Examples:
+;   - https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit#gid=0 | Blocklist_URL
+;   - gsheet://SPREADSHEET_ID?gid=0&col=URL
+; GSHEET_BLOCKLISTS="https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit#gid=0 | Blocklist_URL"
+
+; ------------------------------------------------------------------------------
+; 2. WHITELISTS (Exact Domains)
+; ------------------------------------------------------------------------------
+; Handcrafted exact domains to whitelist (e.g. anti-breakage, shopping fix)
+WHITELIST_URL="https://raw.githubusercontent.com/anudeepND/whitelist/master/domains/whitelist.txt
+https://raw.githubusercontent.com/hagezi/dns-blocklists/main/domains/whitelist-referral.txt"
+
+; Dedicated Google Sheets source for whitelisted domains
+; GSHEET_WHITELISTS="https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit#gid=123456 | Domain"
+
+; ------------------------------------------------------------------------------
+; 3. BLACKLISTS (Exact Domains)
+; ------------------------------------------------------------------------------
+; Handcrafted exact domains to blacklist directly (do not place full blocklists here)
+BLACKLIST_URL=""
+
+; Dedicated Google Sheets source for blacklisted domains
+; GSHEET_BLACKLISTS="https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit#gid=654321 | Domain"
+
+; ------------------------------------------------------------------------------
+; 4. REGEX WHITELISTS
+; ------------------------------------------------------------------------------
+; Remote or local lists containing regex rules for allowlisting
+REGEX_WHITELIST_URL="https://raw.githubusercontent.com/mmotti/pihole-regex/master/whitelist.list"
+
+; Dedicated Google Sheets source for regex whitelists
+; GSHEET_REGEX_WHITELISTS=""
+
+; ------------------------------------------------------------------------------
+; 5. REGEX BLACKLISTS
+; ------------------------------------------------------------------------------
+; Remote or local lists containing regex rules for blocking
+REGEX_BLACKLIST_URL="https://raw.githubusercontent.com/mmotti/pihole-regex/master/regex.list
+https://raw.githubusercontent.com/stevejenkins/pi-hole-lists/main/regex.txt"
+
+; Dedicated Google Sheets source for regex blacklists
+; GSHEET_REGEX_BLACKLISTS=""
+
+; ------------------------------------------------------------------------------
+; 6. SQLITE DATABASE STORED IN GOOGLE DRIVE (OR LOCAL SYNC)
+; ------------------------------------------------------------------------------
+; Specify either:
+;   - Google Drive File ID: "1AbCdEfGhIjKlMnOpQrStUvWxYz012345"
+;   - Google Drive Sharing Link: "https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz012345/view?usp=sharing"
+;   - Local / Rclone synced path: "/mnt/gdrive/pihole/lists.sqlite"
+;
+; GDRIVE_SQLITE_FILE="https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz012345/view?usp=sharing"
+;
+; SQL Queries executed against the database to fetch lists:
+; GDRIVE_SQLITE_QUERY_BLOCKLISTS="SELECT url FROM sources WHERE type = 'adlist' AND enabled = 1"
+; GDRIVE_SQLITE_QUERY_WHITELISTS="SELECT domain FROM whitelist WHERE enabled = 1"
+; GDRIVE_SQLITE_QUERY_BLACKLISTS="SELECT domain FROM blacklist WHERE enabled = 1"
+; GDRIVE_SQLITE_QUERY_REGEX_WHITELISTS="SELECT pattern FROM regex_rules WHERE rule_type = 'allow' AND enabled = 1"
+; GDRIVE_SQLITE_QUERY_REGEX_BLACKLISTS="SELECT pattern FROM regex_rules WHERE rule_type = 'block' AND enabled = 1"

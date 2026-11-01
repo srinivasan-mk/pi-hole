@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# pihole-cloud-updater CLI wrapper
+# Launches Python updater utility with standard paths
+# ==============================================================================
+
+set -euo pipefail
+
+# Find Python 3
+if command -v python3 >/dev/null 2>&1; then
+    PYTHON_BIN="python3"
+elif command -v python >/dev/null 2>&1; then
+    PYTHON_BIN="python"
+else
+    echo "[-] Error: python3 is required but not installed." >&2
+    echo "    Install with: sudo apt-get install -y python3 python3-sqlite3" >&2
+    exit 1
+fi
+
+# Locate script
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_PATH=""
+
+if [ -f "${SCRIPT_DIR}/pihole-cloud-updater.py" ]; then
+    SCRIPT_PATH="${SCRIPT_DIR}/pihole-cloud-updater.py"
+elif [ -f "/usr/local/share/pihole-cloud-updater/pihole-cloud-updater.py" ]; then
+    SCRIPT_PATH="/usr/local/share/pihole-cloud-updater/pihole-cloud-updater.py"
+elif [ -f "/etc/pihole/pihole-cloud-updater.py" ]; then
+    SCRIPT_PATH="/etc/pihole/pihole-cloud-updater.py"
+else
+    echo "[-] Error: pihole-cloud-updater.py not found in search paths." >&2
+    exit 1
+fi
+
+exec "${PYTHON_BIN}" "${SCRIPT_PATH}" "$@"

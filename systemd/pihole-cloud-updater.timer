@@ -1,0 +1,12 @@
+[Unit]
+Description=Periodic sync of Pi-hole lists from Cloud & Remote Sources
+Requires=pihole-cloud-updater.service
+
+[Timer]
+# Run daily at 03:30 AM with a randomized delay of up to 15 minutes to avoid load spikes
+OnCalendar=*-*-* 03:30:00
+RandomizedDelaySec=900
+Persistent=true
+
+[Install]
+WantedBy=timers.target

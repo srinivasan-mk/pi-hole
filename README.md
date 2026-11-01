@@ -1,22 +1,38 @@
-# Pi-hole Automated Lists Configuration & Deployment
+# Pi-hole Automated Lists Configuration & Cloud Updater
 
 [![Pi-hole v6](https://img.shields.io/badge/Pi--hole-v6.x-red.svg)](https://pi-hole.net/)
-[![pihole-updatelists](https://img.shields.io/badge/pihole--updatelists-jacklul-blue.svg)](https://github.com/jacklul/pihole-updatelists)
+[![Python 3](https://img.shields.io/badge/Python-3.7+-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-An optimized, curated, and automated configuration for [Pi-hole](https://pi-hole.net/) (including **Pi-hole v6**) powered by [pihole-updatelists](https://github.com/jacklul/pihole-updatelists).
-
-This repository automates the synchronization of best-of-breed DNS blocklists, native hardware/OS telemetry blockers, India-specific regional ad & tracker filters, and anti-breakage whitelists.
+An optimized, curated, and automated configuration for [Pi-hole](https://pi-hole.net/) (including **Pi-hole v6**) featuring:
+- **`pihole-cloud-updater`**: A modern Python 3 list updater supporting **Lists of Lists ("listsoflist")**, **Google Sheets**, and **SQLite databases stored in Google Drive or cloud sync**.
+- Curated regional DNS blocklists (India-specific apps, news portals, and domestic ad networks).
+- Native hardware/OS telemetry blockers (Apple, Windows 10/11, Mi TV, Samsung TV, Realme/Oppo/Vivo, IoT).
+- Anti-breakage whitelists for UPI, Netbanking, Quick-Commerce, and Google Shopping redirects.
 
 ---
 
-## 📋 Features & Blocklist Architecture
+## 🌟 Key Capabilities of `pihole-cloud-updater`
 
-Instead of stacking uncurated lists that create massive database bloat and false positives, this configuration relies on an organized multi-tier strategy:
+| Feature | Description |
+| :--- | :--- |
+| **Lists of Lists ("listsoflist")** | Recursively resolves index lists (e.g. Firebog, Steve Jenkins, custom files) to fetch underlying adlists with loop protection. |
+| **Google Sheets Integration** | Directly sync adlists, whitelists, blacklists, or regex from public/shared Google Sheets with automatic CSV export, tab/gid selection, and column targeting. |
+| **Google Drive SQLite Databases** | Downloads and executes custom SQL queries against SQLite databases (`.db` / `.sqlite`) hosted on Google Drive or local rclone mounts. |
+| **Zero Dependencies** | Pure Python 3 standard library (`sqlite3`, `urllib`, `csv`). No PHP or external pip packages required. |
+| **Pi-hole v5 & v6 Ready** | Detects Pi-hole major version, handles group mappings, and triggers atomic gravity rebuilds or DNS list reloads. |
+| **Safe Database Transactions** | Automatic `gravity.db` backups before writing, atomic `BEGIN TRANSACTION ... COMMIT`, and automatic rollback on errors. |
+| **Automated Systemd Timer** | Daily automated sync timer (`pihole-cloud-updater.timer`) with randomized delay. |
+
+For full documentation and advanced options, see [docs/pihole-cloud-updater.md](docs/pihole-cloud-updater.md).
+
+---
+
+## 📋 Blocklist Architecture
 
 ```
 ┌────────────────────────────────────────────────────────┐
-│               /etc/pihole-updatelists.conf             │
+│             /etc/pihole-cloud-updater.conf             │
 └───────────────────────────┬────────────────────────────┘
                             │
        ┌────────────────────┼───────────────────┐
@@ -25,15 +41,14 @@ Instead of stacking uncurated lists that create massive database bloat and false
 │  BLOCKLISTS  │     │  WHITELISTS  │    │  REGEX RULES │
 └──────┬───────┘     └──────┬───────┘    └──────┬───────┘
        │                    │                   │
-       ├─ Firebog Ticked    ├─ anudeepND Safe   ├─ mmotti regex
-       ├─ Steve Jenkins     └─ HaGeZi Referral  └─ Steve Jenkins
-       │  (HaGeZi Pro++,       (Shopping fix)
-       │   TIF, OISD Big)
+       ├─ Google Sheets     ├─ Google Sheets    ├─ mmotti regex
+       ├─ GDrive SQLite     ├─ anudeepND Safe   └─ Steve Jenkins
+       ├─ Firebog LoL       └─ HaGeZi Referral
+       ├─ Steve Jenkins        (Shopping fix)
        └─ custom-blocklists.list
-          (See breakdown below)
 ```
 
-### 1. Curated Custom Blocklists (`config/custom-blocklists.list`)
+### Curated Custom Blocklists (`config/custom-blocklists.list`)
 
 * **🇮🇳 India Regional Ads & Trackers:**
   * **EasyList IndianList:** Official regional filter for Indian news portals (Times of India, NDTV, Dainik Bhaskar, etc.) and domestic ad networks.
@@ -53,13 +68,6 @@ Instead of stacking uncurated lists that create massive database bloat and false
   * **1Hosts Lite:** Lightweight, actively maintained modern tracking filter.
   * **Dandelion Sprout Game Console AdBlock:** Blocks ads on PlayStation, Xbox, and Nintendo Switch.
 
-### 2. False-Positive Protection & Whitelists
-
-Aggressive ad-blocking can break legitimate services. This configuration protects:
-* **UPI & Netbanking:** BHIM, Google Pay, PhonePe, Paytm, and banking portals (SBI, HDFC, ICICI, Axis).
-* **Delivery & Quick-Commerce:** Swiggy, Zomato, Blinkit, Zepto, Flipkart.
-* **Shopping / Referral Links:** HaGeZi Referral Allowlist ensures Google Shopping, Slickdeals, and affiliate redirects resolve without disabling your blocker.
-
 ---
 
 ## 🚀 Quickstart Deployment
@@ -75,11 +83,11 @@ sudo bash deploy.sh
 ```
 
 `deploy.sh` automatically:
-1. Verifies Pi-hole installation.
-2. Installs `pihole-updatelists` if missing.
-3. Creates a timestamped backup of any existing `/etc/pihole-updatelists.conf`.
-4. Deploys `/etc/pihole/custom-blocklists.list` and `/etc/pihole-updatelists.conf`.
-5. Runs `pihole-updatelists` to sync and reload gravity.
+1. Verifies Pi-hole installation and Python 3.
+2. Installs `pihole-cloud-updater` to `/usr/local/sbin/pihole-cloud-updater`.
+3. Sets up automated systemd timer (`pihole-cloud-updater.timer`).
+4. Creates backups and deploys configuration files.
+5. Runs `pihole-cloud-updater` to synchronize all lists and reload gravity.
 
 ---
 
@@ -91,15 +99,27 @@ Deploy remotely from your Windows workstation over SSH using the included script
 .\deploy.ps1 -Hostname "pi.hole" -User "rpi4b-admin"
 ```
 
-Or run via standard SSH/SCP commands:
+---
 
-```bash
-scp config/custom-blocklists.list rpi4b-admin@pi.hole:/tmp/custom-blocklists.list
-scp config/pihole-updatelists.conf rpi4b-admin@pi.hole:/tmp/pihole-updatelists.conf
+## ☁️ Cloud Sources Configuration Examples
 
-ssh -t rpi4b-admin@pi.hole "sudo cp /tmp/custom-blocklists.list /etc/pihole/custom-blocklists.list && \
-sudo cp /tmp/pihole-updatelists.conf /etc/pihole-updatelists.conf && \
-sudo /usr/local/sbin/pihole-updatelists"
+In `/etc/pihole-cloud-updater.conf`:
+
+### 1. Google Sheets Sources
+```ini
+; Format: URL [| column_name_or_index]
+GSHEET_BLOCKLISTS="https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit#gid=0 | URL"
+GSHEET_WHITELISTS="https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit#gid=123456 | Domains"
+```
+
+### 2. Google Drive SQLite Database
+```ini
+; Google Drive file link or local sync path
+GDRIVE_SQLITE_FILE="https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz012345/view?usp=sharing"
+
+; Queries to execute
+GDRIVE_SQLITE_QUERY_BLOCKLISTS="SELECT url FROM sources WHERE type = 'adlist' AND enabled = 1"
+GDRIVE_SQLITE_QUERY_WHITELISTS="SELECT domain FROM whitelist WHERE active = 1"
 ```
 
 ---
@@ -109,36 +129,42 @@ sudo /usr/local/sbin/pihole-updatelists"
 ```
 .
 ├── config/
-│   ├── pihole-updatelists.conf    # Main configuration for pihole-updatelists
-│   └── custom-blocklists.list     # Curated adlist index (HaGeZi, India, Smart TV, etc.)
+│   ├── custom-blocklists.list              # Curated adlist index (HaGeZi, India, Smart TV, etc.)
+│   ├── pihole-cloud-updater.conf.example   # Example config with Google Sheets, GDrive SQLite, and LoL
+│   └── pihole-updatelists.conf             # Backward-compatible pihole-updatelists configuration
 ├── docs/
-│   └── pihole-analysis.md         # In-depth analysis of lists, metrics, and comparisons
-├── deploy.sh                      # Turnkey deployment script for Linux/Pi
-├── deploy.ps1                     # Remote deployment script for Windows PowerShell
-├── .gitattributes                 # Enforces Linux LF line-endings for config files
-└── README.md                      # Documentation
+│   ├── pihole-cloud-updater.md             # Comprehensive cloud updater & configuration manual
+│   └── pihole-analysis.md                  # In-depth analysis of lists, metrics, and comparisons
+├── scripts/
+│   ├── pihole-cloud-updater.py             # Python 3 engine for cloud list parsing & gravity sync
+│   ├── pihole-cloud-updater                # CLI launcher executable
+│   └── install.sh                          # Standalone installer for the cloud updater
+├── systemd/
+│   ├── pihole-cloud-updater.service        # Systemd service unit
+│   └── pihole-cloud-updater.timer          # Systemd daily automation timer (03:30 AM)
+├── deploy.sh                               # Turnkey deployment script for Linux/Pi
+├── deploy.ps1                              # Remote deployment script for Windows PowerShell
+├── .gitattributes                          # Enforces Linux LF line-endings for config files
+└── README.md                               # Project documentation
 ```
 
 ---
 
-## ⏰ Automated Updates (Cron)
+## ⏰ Automated Updates & Testing
 
-`pihole-updatelists` comes with an automated cron job. Verify its schedule at:
-
+To test list resolution without applying changes:
 ```bash
-cat /etc/cron.d/pihole-updatelists
+sudo pihole-cloud-updater --dry-run
 ```
 
-To run a manual synchronization at any time:
-
+To test fetching a single Google Sheet or list:
 ```bash
-sudo /usr/local/sbin/pihole-updatelists
+pihole-cloud-updater --test-source "https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit#gid=0 | URL"
 ```
 
-To update Pi-hole gravity manually:
-
+To force a full gravity rebuild:
 ```bash
-sudo pihole -g
+sudo pihole-cloud-updater --gravity
 ```
 
 ---
@@ -147,4 +173,3 @@ sudo pihole -g
 
 This repository is licensed under the [MIT License](LICENSE).
 Individual blocklists are maintained by their respective authors and projects cited within the configuration.
-
