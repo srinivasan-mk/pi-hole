@@ -1,0 +1,96 @@
+# Additional Curated Blocklists for Pi-hole
+# Managed via pihole-updatelists (/etc/pihole/custom-blocklists.list)
+
+# ========================================================
+# === INDIA REGIONAL ADS, TRACKERS & TELEMETRY ===
+# ========================================================
+
+# EasyList IndianList - Official regional filter for Indian websites,
+# portals (Times of India, NDTV, regional news), and local ad networks
+https://easylist-downloads.adblockplus.org/indianlist.txt
+
+# GoodbyeAds (by jerryn70) - Extensively targets mobile app ads,
+# in-app SDK trackers, Indian OTT/streaming telemetry, and ad servers
+https://raw.githubusercontent.com/jerryn70/GoodbyeAds/master/Hosts/GoodbyeAds.txt
+
+# GoodbyeAds Xiaomi / Mi TV Extension (MIUI tracking & smart TV ads)
+https://raw.githubusercontent.com/jerryn70/GoodbyeAds/master/Extension/GoodbyeAds-Xiaomi-Extension.txt
+
+# HaGeZi Native Xiaomi - Xiaomi smartphone and Mi TV telemetry
+https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/native.xiaomi.txt
+
+# HaGeZi Native Oppo & Realme - BBK Electronics telemetry common in India
+https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/native.oppo-realme.txt
+
+# HaGeZi Native Vivo - Vivo mobile telemetry
+https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/native.vivo.txt
+
+
+# ========================================================
+# === HAGEZI SPECIALIZED FEEDS ===
+# ========================================================
+
+# HaGeZi DynDNS - blocks dynamic DNS abuse (C2, malware, phishing campaigns)
+https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/dyndns.txt
+
+# HaGeZi Anti-Piracy - blocks illegal streaming, warez, and torrent networks
+https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/anti.piracy.txt
+
+
+# ========================================================
+# === NATIVE OS & HARDWARE TELEMETRY ===
+# ========================================================
+
+# Apple devices telemetry
+https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/native.apple.txt
+
+# Amazon Echo, FireTV & services telemetry
+https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/native.amazon.txt
+
+# Windows 10/11 & Microsoft Office telemetry
+https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/native.winoffice.txt
+
+# Samsung Smart TV & Mobile telemetry
+https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/native.samsung.txt
+
+# LG webOS Smart TV telemetry
+https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/native.lgwebos.txt
+
+# TikTok tracking & metrics
+https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/native.tiktok.txt
+
+
+# ========================================================
+# === SMART TV & MOBILE TELEMETRY ===
+# ========================================================
+
+# Perflyst Multi-Vendor Smart TV Blocklist (Samsung, LG, Sony, Roku, Philips, etc.)
+https://raw.githubusercontent.com/Perflyst/PiHoleBlocklist/master/SmartTV.txt
+
+# Perflyst Android Tracking
+https://raw.githubusercontent.com/Perflyst/PiHoleBlocklist/master/android-tracking.txt
+
+# Samsung TV Telemetry & ACR by mboutolleau
+https://raw.githubusercontent.com/mboutolleau/block-samsung-tv-telemetry/refs/heads/master/samsung_tv_telemetry_urls.txt
+
+
+# ========================================================
+# === DEVELOPER DAN CURATED LISTS ===
+# ========================================================
+
+# Developer Dan Ads & Tracking Extended
+https://www.github.developerdan.com/hosts/lists/ads-and-tracking-extended.txt
+
+# Developer Dan AMP Hosts (strips Google AMP tracking redirects)
+https://www.github.developerdan.com/hosts/lists/amp-hosts-extended.txt
+
+
+# ========================================================
+# === 1HOSTS & GAMING CONSOLE FILTERS ===
+# ========================================================
+
+# 1Hosts Lite - high quality modern tracking & ad blocking
+https://badmojr.github.io/1Hosts/Lite/adblock.txt
+
+# Dandelion Sprout Game Console AdblockList (PlayStation, Xbox, Nintendo)
+https://raw.githubusercontent.com/DandelionSprout/adfilt/master/GameConsoleAdblockList.txt
