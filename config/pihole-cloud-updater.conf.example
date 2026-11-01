@@ -113,3 +113,4 @@ https://raw.githubusercontent.com/stevejenkins/pi-hole-lists/main/regex.txt"
 ; GDRIVE_SQLITE_QUERY_BLACKLISTS="SELECT domain FROM blacklist WHERE enabled = 1"
 ; GDRIVE_SQLITE_QUERY_REGEX_WHITELISTS="SELECT pattern FROM regex_rules WHERE rule_type = 'allow' AND enabled = 1"
 ; GDRIVE_SQLITE_QUERY_REGEX_BLACKLISTS="SELECT pattern FROM regex_rules WHERE rule_type = 'block' AND enabled = 1"
+

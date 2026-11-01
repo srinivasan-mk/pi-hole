@@ -176,3 +176,4 @@ optional arguments:
 - **Manual Entry Protection:** When `REQUIRE_COMMENT=true` (default), only entries created by the updater are touched or removed. Any domains or adlists you manually added via the Pi-hole Web Admin GUI are preserved.
 - **Automatic Backups:** Before making database changes, `gravity.db` is backed up to `/etc/pihole/gravity.db.bak.<timestamp>`.
 - **Rollback Safety:** All updates execute inside an atomic SQLite transaction (`BEGIN TRANSACTION ... COMMIT`). If an error occurs, the transaction automatically rolls back.
+

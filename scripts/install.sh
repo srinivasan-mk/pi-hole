@@ -77,3 +77,4 @@ echo "    Run manually: sudo pihole-cloud-updater"
 echo "    Dry run test: sudo pihole-cloud-updater --dry-run"
 echo "    Config file : /etc/pihole-cloud-updater.conf"
 echo "============================================================"
+
