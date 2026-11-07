@@ -129,26 +129,38 @@ class TestGDriveSQLiteIntegration(unittest.TestCase):
 
 
 class TestListsOfLists(unittest.TestCase):
+    def test_adlist_index_resolution(self):
+        fetcher = updater.CloudSourceFetcher(cache_dir=tempfile.gettempdir(), max_depth=2)
+
+        # Standard Firebog-style index of adlists (URLs should be collected directly without fetching individual adlists)
+        firebog_content = "https://adaway.org/hosts.txt\nhttps://v.firebog.net/hosts/AdguardDNS.txt\n# comment\n"
+
+        with patch.object(fetcher, "fetch_text", return_value=firebog_content):
+            results = fetcher.resolve_all_adlists("https://v.firebog.net/hosts/lists.php?type=tick")
+            self.assertEqual(
+                results,
+                [
+                    "https://adaway.org/hosts.txt",
+                    "https://v.firebog.net/hosts/AdguardDNS.txt",
+                ],
+            )
+
     def test_recursive_lists_of_lists(self):
         fetcher = updater.CloudSourceFetcher(cache_dir=tempfile.gettempdir(), max_depth=2)
 
-        # Mock responses
-        # Root index points to sublist A and sublist B
-        root_content = "https://server.com/sublist_a.txt\nhttps://server.com/sublist_b.txt\n# ignore this comment\n"
-        sublist_a_content = "https://adlists.com/adlist1.txt\nhttps://adlists.com/adlist2.txt\n"
+        # Root index contains direct adlists and an explicit nested list
+        root_content = "https://adlists.com/adlist1.txt\nhttps://adlists.com/adlist2.txt\nlol:https://server.com/sublist_b.txt\n# ignore\n"
         sublist_b_content = "https://adlists.com/adlist3.txt\n"
 
         def mock_fetch(url):
             if url == "https://server.com/root.txt":
                 return root_content
-            elif url == "https://server.com/sublist_a.txt":
-                return sublist_a_content
             elif url == "https://server.com/sublist_b.txt":
                 return sublist_b_content
             return ""
 
         with patch.object(fetcher, "fetch_text", side_effect=mock_fetch):
-            results = fetcher.resolve_source("https://server.com/root.txt")
+            results = fetcher.resolve_all_adlists("https://server.com/root.txt")
             self.assertEqual(
                 results,
                 [
@@ -157,6 +169,13 @@ class TestListsOfLists(unittest.TestCase):
                     "https://adlists.com/adlist3.txt",
                 ],
             )
+
+    def test_http_error_graceful_skipping(self):
+        fetcher = updater.CloudSourceFetcher(cache_dir=tempfile.gettempdir(), ignore_failures=True)
+        # Mock 410 Gone error
+        with patch.object(fetcher.opener, "open", side_effect=updater.urllib.error.HTTPError("https://urlhaus.abuse.ch/downloads/hostfile/", 410, "Gone", {}, None)):
+            res = fetcher.fetch_text("https://urlhaus.abuse.ch/downloads/hostfile/")
+            self.assertEqual(res, "")
 
 
 class TestGravitySync(unittest.TestCase):

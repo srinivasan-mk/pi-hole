@@ -33,7 +33,7 @@ import urllib.parse
 import urllib.request
 from typing import Dict, List, Optional, Set, Tuple
 
-VERSION = "1.0.0"
+VERSION = "1.0.1"
 
 # Default configuration values
 DEFAULT_CONFIG = {
@@ -53,7 +53,7 @@ DEFAULT_CONFIG = {
     "VACUUM_DATABASE": False,
     "VERBOSE": False,
     "DEBUG": False,
-    "IGNORE_DOWNLOAD_FAILURE": False,
+    "IGNORE_DOWNLOAD_FAILURE": True,
     "CACHE_DIR": "/var/cache/pihole-cloud-updater",
     "MAX_RECURSION_DEPTH": 2,
     "REQUEST_TIMEOUT": 30,
@@ -102,7 +102,6 @@ class ConfigParser:
 
         for match in pattern.finditer(content):
             key = match.group(1).strip()
-            # Val can be from group 2 (double quotes), 3 (single quotes), or 4 (unquoted)
             val = match.group(2) if match.group(2) is not None else (
                 match.group(3) if match.group(3) is not None else match.group(4)
             )
@@ -129,7 +128,7 @@ class CloudSourceFetcher:
         cache_dir: str = "/tmp/pihole-cloud-cache",
         timeout: int = 30,
         user_agent: str = DEFAULT_CONFIG["USER_AGENT"],
-        ignore_failures: bool = False,
+        ignore_failures: bool = True,
         max_depth: int = 2,
     ):
         self.cache_dir = cache_dir
@@ -158,7 +157,7 @@ class CloudSourceFetcher:
                 with open(local_path, "r", encoding="utf-8", errors="replace") as f:
                     return f.read()
             except Exception as e:
-                logger.error("Failed to read local file '%s': %s", local_path, e)
+                logger.warning("Failed to read local file '%s': %s", local_path, e)
                 if not self.ignore_failures:
                     raise
                 return ""
@@ -176,8 +175,18 @@ class CloudSourceFetcher:
             with self.opener.open(req, timeout=self.timeout) as resp:
                 raw_bytes = resp.read()
                 return raw_bytes.decode("utf-8", errors="replace")
+        except urllib.error.HTTPError as e:
+            logger.warning("Failed to fetch URL '%s': HTTP Error %d: %s (skipping)", url, e.code, e.reason)
+            if not self.ignore_failures:
+                raise
+            return ""
+        except urllib.error.URLError as e:
+            logger.warning("Failed to fetch URL '%s': Network Error: %s (skipping)", url, e.reason)
+            if not self.ignore_failures:
+                raise
+            return ""
         except Exception as e:
-            logger.error("Failed to fetch URL '%s': %s", url, e)
+            logger.warning("Failed to fetch URL '%s': %s (skipping)", url, e)
             if not self.ignore_failures:
                 raise
             return ""
@@ -251,7 +260,6 @@ class CloudSourceFetcher:
 
         # Build direct CSV export URL
         if sheet_name:
-            # Using Google Visualization API for named sheet tab
             export_url = (
                 f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?"
                 f"tqx=out:csv&sheet={urllib.parse.quote(sheet_name)}"
@@ -277,13 +285,10 @@ class CloudSourceFetcher:
 
         if col_spec is not None:
             col_spec_str = str(col_spec).strip()
-            # If specified as numeric index
             if col_spec_str.isdigit():
                 target_col_idx = int(col_spec_str)
-            # If specified as single column letter (A, B, C...)
             elif len(col_spec_str) == 1 and col_spec_str.upper() in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
                 target_col_idx = ord(col_spec_str.upper()) - ord("A")
-            # If specified as column header name
             elif col_spec_str.lower() in header:
                 target_col_idx = header.index(col_spec_str.lower())
             else:
@@ -294,7 +299,6 @@ class CloudSourceFetcher:
                 )
                 target_col_idx = 0
         else:
-            # Smart discovery: look for known column header names
             candidates = ["url", "link", "list", "blocklist", "whitelist", "domain", "regex", "address", "entry"]
             found = False
             for cand in candidates:
@@ -312,7 +316,6 @@ class CloudSourceFetcher:
             if len(row) > target_col_idx:
                 val = row[target_col_idx].strip()
                 if val and not val.startswith(("#", "//", ";")):
-                    # Support multiple space/comma separated items within a single cell
                     for item in re.split(r"[\s,]+", val):
                         clean_item = item.strip()
                         if clean_item and not clean_item.startswith(("#", "//", ";")):
@@ -348,7 +351,6 @@ class CloudSourceFetcher:
         if match_id:
             return match_id.group(1)
 
-        # Fallback if raw ID passed
         if re.match(r"^[a-zA-Z0-9-_]{20,}$", target):
             return target
 
@@ -358,7 +360,6 @@ class CloudSourceFetcher:
         """Downloads a file from Google Drive handling virus scan confirmation tokens for large files."""
         dest_path = os.path.join(self.cache_dir, f"gdrive_{file_id}.sqlite")
 
-        # Initial download URL
         base_url = f"https://drive.google.com/uc?export=download&id={file_id}"
         req = urllib.request.Request(base_url, headers={"User-Agent": self.user_agent})
 
@@ -366,7 +367,6 @@ class CloudSourceFetcher:
             with self.opener.open(req, timeout=self.timeout) as resp:
                 content = resp.read()
 
-                # Check if Google Drive returned a virus scan warning page with confirm token
                 text_content = content[:4096].decode("utf-8", errors="replace")
                 if "confirm=" in text_content or "download_warning" in text_content:
                     confirm_match = re.search(r"confirm=([0-9A-Za-z_]+)", text_content)
@@ -383,7 +383,7 @@ class CloudSourceFetcher:
             logger.info("Downloaded Google Drive SQLite file [ID: %s] -> %s", file_id, dest_path)
             return dest_path
         except Exception as e:
-            logger.error("Failed to download SQLite file from Google Drive [ID: %s]: %s", file_id, e)
+            logger.warning("Failed to download SQLite file from Google Drive [ID: %s]: %s", file_id, e)
             if not self.ignore_failures:
                 raise
             return ""
@@ -396,20 +396,18 @@ class CloudSourceFetcher:
         if not db_target or not query:
             return []
 
-        # If it's a remote Google Drive file, download it first
         if self.is_gdrive_file(db_target):
             file_id = self.extract_gdrive_file_id(db_target)
             db_path = self.download_gdrive_file(file_id)
         else:
             db_path = db_target
 
-        if not os.path.exists(db_path):
-            logger.error("SQLite database file not found: %s", db_path)
+        if not db_path or not os.path.exists(db_path):
+            logger.warning("SQLite database file not found or failed to download: %s", db_path)
             return []
 
         results = []
         try:
-            # Read-only SQLite connection
             conn = sqlite3.connect(f"file:{os.path.abspath(db_path)}?mode=ro", uri=True)
             cursor = conn.cursor()
             cursor.execute(query)
@@ -421,20 +419,21 @@ class CloudSourceFetcher:
             conn.close()
             logger.info("SQLite query returned %d items from %s", len(results), db_path)
         except Exception as e:
-            logger.error("Error executing query '%s' on %s: %s", query, db_path, e)
+            logger.warning("Error executing query '%s' on %s: %s", query, db_path, e)
             if not self.ignore_failures:
                 raise
 
         return results
 
     # --------------------------------------------------------------------------
-    # Lists of Lists ("listsoflist") & Standard List Resolution
+    # Adlists (Blocklists / Lists of Lists) Resolution
     # --------------------------------------------------------------------------
 
-    def resolve_source(self, source: str, depth: int = 0, visited: Optional[Set[str]] = None) -> List[str]:
+    def resolve_adlist_source(self, source: str, depth: int = 0, visited: Optional[Set[str]] = None) -> List[str]:
         """
-        Resolves a single source (URL, Google Sheet, local file, or SQLite query) into a list of strings.
-        Recursively expands Lists of Lists ("listsoflist") up to max_depth.
+        Resolves an adlist source into a list of adlist URLs.
+        IMPORTANT: This does NOT download the contents of the individual adlists themselves,
+        as those are downloaded and compiled into gravity by Pi-hole ('pihole -g').
         """
         source = source.strip()
         if not source or source.startswith(("#", ";", "//")):
@@ -444,63 +443,87 @@ class CloudSourceFetcher:
             visited = set()
 
         if source in visited:
-            logger.debug("Skipping already visited source: %s", source)
+            logger.debug("Skipping already visited adlist source: %s", source)
             return []
         visited.add(source)
 
-        # Case 1: Google Sheet
+        # 1. Google Sheets source
         if self.is_google_sheet(source):
             return self.fetch_google_sheet(source)
 
-        # Case 2: Direct text fetch (URL or local file)
+        # 2. Explicit nested List-of-Lists prefix (lol:URL or sublist:URL)
+        for prefix in ("lol:", "listsoflist:", "sublist:"):
+            if source.lower().startswith(prefix):
+                target_url = source[len(prefix):].strip()
+                logger.info("Expanding explicit nested List of Lists at '%s' (depth %d)...", target_url, depth)
+                if depth < self.max_depth:
+                    return self.resolve_adlist_source(target_url, depth=depth + 1, visited=visited)
+                return []
+
+        # 3. Remote URL or local file list
         text = self.fetch_text(source)
         if not text:
             return []
 
-        lines = [line.strip() for line in text.splitlines()]
-        entries = []
+        clean_lines = []
+        for line in text.splitlines():
+            line = line.strip()
+            if line and not line.startswith(("#", ";", "//")):
+                line = re.split(r"\s+[#;]", line, maxsplit=1)[0].strip()
+                if line:
+                    clean_lines.append(line)
 
-        # Detect if this text file is a "List of Lists" (contains URLs to other lists)
-        url_count = sum(1 for line in lines if line.startswith(("http://", "https://", "gsheet://", "gdrive://")))
-        is_list_of_lists = url_count > 0 and (url_count / max(1, len([l for l in lines if l and not l.startswith("#")])) > 0.4)
+        if not clean_lines:
+            return []
 
-        if is_list_of_lists and depth < self.max_depth:
-            logger.info("Detected List of Lists (LoL) at '%s' (depth %d). Expanding...", source, depth)
-            for line in lines:
-                if line and not line.startswith(("#", ";", "//")):
-                    # Recursively resolve nested list
-                    sub_entries = self.resolve_source(line, depth=depth + 1, visited=visited)
-                    entries.extend(sub_entries)
+        # Check if this source contains adlist URLs (i.e. is an adlist index / LoL like Firebog)
+        url_count = sum(1 for line in clean_lines if line.startswith(("http://", "https://", "file://", "/", "lol:", "sublist:")))
+        is_list_of_lists = (url_count / len(clean_lines)) > 0.4
+
+        if is_list_of_lists:
+            logger.info("Loaded adlist index '%s': found %d adlist URLs", source, len(clean_lines))
+            adlists = []
+            for line in clean_lines:
+                # Check for explicit nested LoL
+                is_nested = False
+                for prefix in ("lol:", "listsoflist:", "sublist:"):
+                    if line.lower().startswith(prefix):
+                        is_nested = True
+                        nested_url = line[len(prefix):].strip()
+                        if depth < self.max_depth:
+                            adlists.extend(self.resolve_adlist_source(nested_url, depth=depth + 1, visited=visited))
+                        break
+
+                if not is_nested:
+                    # Direct adlist URL (e.g. https://adaway.org/hosts.txt)
+                    # DO NOT fetch it! Add it directly to adlists!
+                    adlists.append(line)
+            return adlists
         else:
-            # Raw entries (domains, regex patterns, or adlist URLs)
-            for line in lines:
-                if line and not line.startswith(("#", ";", "//")):
-                    # Remove trailing inline comments
-                    line = re.split(r"\s+[#;]", line, maxsplit=1)[0].strip()
-                    if line:
-                        entries.append(line)
+            # The lines inside are domains/hosts (e.g. 127.0.0.1 ad.com),
+            # meaning `source` is itself a direct adlist URL.
+            logger.info("Source '%s' appears to be a direct adlist file, registering URL directly.", source)
+            return [source]
 
-        return entries
-
-    def resolve_all(self, raw_sources: str) -> List[str]:
-        """Parses multiline or space-separated source specifications and resolves all entries."""
+    def resolve_all_adlists(self, raw_sources: str) -> List[str]:
+        """Parses multiline source strings and resolves all adlist URLs."""
         if not raw_sources:
             return []
 
         results = []
         visited: Set[str] = set()
 
-        # Split on newlines and spaces (while respecting quotes if any)
-        lines = [line.strip() for line in raw_sources.splitlines() if line.strip()]
-        for line in lines:
-            # Allow multiple URLs on a single line separated by whitespace
-            tokens = [t.strip() for t in re.split(r"\s+", line) if t.strip()]
-            for token in tokens:
-                if not token.startswith(("#", ";", "//")):
-                    items = self.resolve_source(token, depth=0, visited=visited)
+        for line in raw_sources.splitlines():
+            line = line.strip()
+            if not line or line.startswith(("#", ";", "//")):
+                continue
+            for token in re.split(r"\s+", line):
+                token = token.strip()
+                if token and not token.startswith(("#", ";", "//")):
+                    items = self.resolve_adlist_source(token, depth=0, visited=visited)
                     results.extend(items)
 
-        # Return deduplicated while preserving order
+        # Deduplicate while preserving order
         seen = set()
         deduped = []
         for item in results:
@@ -508,6 +531,91 @@ class CloudSourceFetcher:
                 seen.add(item)
                 deduped.append(item)
         return deduped
+
+    # --------------------------------------------------------------------------
+    # Domains & Regex Resolution (Whitelists, Blacklists, Regex Rules)
+    # --------------------------------------------------------------------------
+
+    def resolve_domain_source(self, source: str, depth: int = 0, visited: Optional[Set[str]] = None) -> List[str]:
+        """
+        Resolves exact domains or regex rules from URLs, Google Sheets, or local files.
+        """
+        source = source.strip()
+        if not source or source.startswith(("#", ";", "//")):
+            return []
+
+        if visited is None:
+            visited = set()
+
+        if source in visited:
+            return []
+        visited.add(source)
+
+        if self.is_google_sheet(source):
+            return self.fetch_google_sheet(source)
+
+        for prefix in ("lol:", "listsoflist:", "sublist:"):
+            if source.lower().startswith(prefix):
+                target_url = source[len(prefix):].strip()
+                if depth < self.max_depth:
+                    return self.resolve_domain_source(target_url, depth=depth + 1, visited=visited)
+                return []
+
+        text = self.fetch_text(source)
+        if not text:
+            return []
+
+        entries = []
+        for line in text.splitlines():
+            line = line.strip()
+            if line and not line.startswith(("#", ";", "//")):
+                line = re.split(r"\s+[#;]", line, maxsplit=1)[0].strip()
+                if line:
+                    is_nested = False
+                    for prefix in ("lol:", "listsoflist:", "sublist:"):
+                        if line.lower().startswith(prefix):
+                            is_nested = True
+                            nested = line[len(prefix):].strip()
+                            if depth < self.max_depth:
+                                entries.extend(self.resolve_domain_source(nested, depth=depth + 1, visited=visited))
+                            break
+                    if not is_nested:
+                        entries.append(line)
+
+        return entries
+
+    def resolve_all_domains(self, raw_sources: str) -> List[str]:
+        """Parses multiline source strings and resolves all domain/regex entries."""
+        if not raw_sources:
+            return []
+
+        results = []
+        visited: Set[str] = set()
+
+        for line in raw_sources.splitlines():
+            line = line.strip()
+            if not line or line.startswith(("#", ";", "//")):
+                continue
+            for token in re.split(r"\s+", line):
+                token = token.strip()
+                if token and not token.startswith(("#", ";", "//")):
+                    items = self.resolve_domain_source(token, depth=0, visited=visited)
+                    results.extend(items)
+
+        seen = set()
+        deduped = []
+        for item in results:
+            if item not in seen:
+                seen.add(item)
+                deduped.append(item)
+        return deduped
+
+    # Backward-compatibility aliases
+    def resolve_source(self, source: str, depth: int = 0, visited: Optional[Set[str]] = None) -> List[str]:
+        return self.resolve_adlist_source(source, depth, visited)
+
+    def resolve_all(self, raw_sources: str) -> List[str]:
+        return self.resolve_all_adlists(raw_sources)
 
 
 class GravitySync:
@@ -556,7 +664,6 @@ class GravitySync:
         cursor = conn.cursor()
         now = int(time.time())
 
-        # Retrieve existing adlists
         cursor.execute("SELECT id, address, comment, enabled FROM adlist")
         existing_rows = cursor.fetchall()
         existing_by_url = {row[1]: {"id": row[0], "comment": row[2] or "", "enabled": row[3]} for row in existing_rows}
@@ -565,15 +672,12 @@ class GravitySync:
         to_add = []
         to_remove_ids = []
 
-        # Find new adlists to insert
         for url in target_urls:
             if url not in existing_by_url:
                 to_add.append(url)
 
-        # Find obsolete managed adlists
         for url, data in existing_by_url.items():
             if url not in target_set:
-                # Check comment tag if require_comment is enabled
                 is_managed = (self.comment_tag in data["comment"]) if self.require_comment else True
                 if is_managed:
                     to_remove_ids.append(data["id"])
@@ -592,7 +696,6 @@ class GravitySync:
             self.changes_made["adlist_removed"] = len(to_remove_ids)
             return
 
-        # Insert new adlists
         for url in to_add:
             cursor.execute(
                 """
@@ -602,13 +705,11 @@ class GravitySync:
                 (url, now, now, self.comment_tag),
             )
             adlist_id = cursor.lastrowid
-            # Assign to group
             cursor.execute(
                 "INSERT OR IGNORE INTO adlist_by_group (adlist_id, group_id) VALUES (?, ?)",
                 (adlist_id, self.adlists_group_id),
             )
 
-        # Handle obsolete adlists
         if to_remove_ids:
             if self.delete_obsolete:
                 for ad_id in to_remove_ids:
@@ -626,7 +727,6 @@ class GravitySync:
         cursor = conn.cursor()
         now = int(time.time())
 
-        # Retrieve existing entries for this type
         cursor.execute("SELECT id, domain, comment, enabled FROM domainlist WHERE type = ?", (domain_type,))
         existing_rows = cursor.fetchall()
         existing_by_domain = {row[1]: {"id": row[0], "comment": row[2] or "", "enabled": row[3]} for row in existing_rows}
@@ -660,7 +760,6 @@ class GravitySync:
             self.changes_made["domain_removed"] += len(to_remove_ids)
             return
 
-        # Insert new domains
         for d in to_add:
             cursor.execute(
                 """
@@ -675,7 +774,6 @@ class GravitySync:
                 (domain_id, self.domains_group_id),
             )
 
-        # Remove obsolete
         if to_remove_ids:
             if self.delete_obsolete:
                 for d_id in to_remove_ids:
@@ -762,10 +860,8 @@ def trigger_pihole_reload(changes: dict, force_gravity: bool = False):
     elif domains_changed:
         logger.info("Domains changed. Reloading Pi-hole DNS lists...")
         if major_ver >= 6:
-            # Pi-hole v6 supports reload-lists without rebuilding full gravity
             subprocess.run(["pihole", "restartdns", "reload-lists"], check=False)
         else:
-            # Pi-hole v5 reload
             subprocess.run(["pihole", "restartdns", "reload"], check=False)
     else:
         logger.info("No gravity or DNS reload needed (no modifications detected).")
@@ -786,7 +882,6 @@ def main():
     parser.add_argument("--test-source", metavar="TARGET", help="Test fetch a single source and print extracted items")
     args = parser.parse_args()
 
-    # Logging setup
     log_level = logging.DEBUG if args.debug else (logging.INFO if args.verbose else logging.INFO)
     logging.basicConfig(
         level=log_level,
@@ -794,11 +889,10 @@ def main():
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
-    # If --test-source is invoked, simply test fetch and exit
     if args.test_source:
-        fetcher = CloudSourceFetcher(timeout=30)
+        fetcher = CloudSourceFetcher(timeout=30, ignore_failures=True)
         print(f"Testing extraction from: {args.test_source}")
-        items = fetcher.resolve_source(args.test_source)
+        items = fetcher.resolve_adlist_source(args.test_source)
         print(f"Extracted {len(items)} items:")
         for idx, item in enumerate(items[:50], 1):
             print(f"  {idx}. {item}")
@@ -806,10 +900,8 @@ def main():
             print(f"  ... and {len(items) - 50} more.")
         sys.exit(0)
 
-    # Load configuration
     cfg = DEFAULT_CONFIG.copy()
 
-    # Look for fallback config file if default not found
     config_file = args.config
     if not os.path.exists(config_file):
         for candidate in ["/etc/pihole-updatelists.conf", "config/pihole-cloud-updater.conf", "config/pihole-updatelists.conf"]:
@@ -821,7 +913,6 @@ def main():
     parsed_cfg = ConfigParser.parse_file(config_file)
     cfg.update(parsed_cfg)
 
-    # CLI flags override config
     if args.verbose:
         cfg["VERBOSE"] = True
     if args.debug:
@@ -833,7 +924,7 @@ def main():
         cache_dir=cfg.get("CACHE_DIR", "/var/cache/pihole-cloud-updater"),
         timeout=int(cfg.get("REQUEST_TIMEOUT", 30)),
         user_agent=str(cfg.get("USER_AGENT", DEFAULT_CONFIG["USER_AGENT"])),
-        ignore_failures=bool(cfg.get("IGNORE_DOWNLOAD_FAILURE", False)),
+        ignore_failures=bool(cfg.get("IGNORE_DOWNLOAD_FAILURE", True)),
         max_depth=int(cfg.get("MAX_RECURSION_DEPTH", 2)),
     )
 
@@ -841,7 +932,7 @@ def main():
 
     # 1. Collect Adlists (Blocklists / Allowlist URLs / Lists of Lists)
     adlist_sources = [cfg.get("BLOCKLISTS_URL", ""), cfg.get("GSHEET_BLOCKLISTS", "")]
-    all_adlists = fetcher.resolve_all("\n".join(filter(None, adlist_sources)))
+    all_adlists = fetcher.resolve_all_adlists("\n".join(filter(None, adlist_sources)))
 
     # Add results from Google Drive SQLite query if configured
     gdrive_db = cfg.get("GDRIVE_SQLITE_FILE", "")
@@ -859,25 +950,25 @@ def main():
 
     # 2. Collect Whitelists (exact domains)
     whitelist_sources = [cfg.get("WHITELIST_URL", ""), cfg.get("GSHEET_WHITELISTS", "")]
-    all_whitelists = fetcher.resolve_all("\n".join(filter(None, whitelist_sources)))
+    all_whitelists = fetcher.resolve_all_domains("\n".join(filter(None, whitelist_sources)))
     if gdrive_db and cfg.get("GDRIVE_SQLITE_QUERY_WHITELISTS"):
         all_whitelists.extend(fetcher.query_sqlite(gdrive_db, cfg["GDRIVE_SQLITE_QUERY_WHITELISTS"]))
 
     # 3. Collect Blacklists (exact domains)
     blacklist_sources = [cfg.get("BLACKLIST_URL", ""), cfg.get("GSHEET_BLACKLISTS", "")]
-    all_blacklists = fetcher.resolve_all("\n".join(filter(None, blacklist_sources)))
+    all_blacklists = fetcher.resolve_all_domains("\n".join(filter(None, blacklist_sources)))
     if gdrive_db and cfg.get("GDRIVE_SQLITE_QUERY_BLACKLISTS"):
         all_blacklists.extend(fetcher.query_sqlite(gdrive_db, cfg["GDRIVE_SQLITE_QUERY_BLACKLISTS"]))
 
     # 4. Collect Regex Whitelists
     regex_whitelist_sources = [cfg.get("REGEX_WHITELIST_URL", ""), cfg.get("GSHEET_REGEX_WHITELISTS", "")]
-    all_regex_whitelists = fetcher.resolve_all("\n".join(filter(None, regex_whitelist_sources)))
+    all_regex_whitelists = fetcher.resolve_all_domains("\n".join(filter(None, regex_whitelist_sources)))
     if gdrive_db and cfg.get("GDRIVE_SQLITE_QUERY_REGEX_WHITELISTS"):
         all_regex_whitelists.extend(fetcher.query_sqlite(gdrive_db, cfg["GDRIVE_SQLITE_QUERY_REGEX_WHITELISTS"]))
 
     # 5. Collect Regex Blacklists
     regex_blacklist_sources = [cfg.get("REGEX_BLACKLIST_URL", ""), cfg.get("GSHEET_REGEX_BLACKLISTS", "")]
-    all_regex_blacklists = fetcher.resolve_all("\n".join(filter(None, regex_blacklist_sources)))
+    all_regex_blacklists = fetcher.resolve_all_domains("\n".join(filter(None, regex_blacklist_sources)))
     if gdrive_db and cfg.get("GDRIVE_SQLITE_QUERY_REGEX_BLACKLISTS"):
         all_regex_blacklists.extend(fetcher.query_sqlite(gdrive_db, cfg["GDRIVE_SQLITE_QUERY_REGEX_BLACKLISTS"]))
 
@@ -922,4 +1013,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

@@ -30,6 +30,9 @@ UPDATE_GRAVITY=true
 ; Vacuum database after update to reclaim space
 VACUUM_DATABASE=false
 
+; Ignore download failures (e.g. HTTP 404/410 or timeouts on dead/deprecated remote lists)
+IGNORE_DOWNLOAD_FAILURE=true
+
 ; Cache directory for downloaded cloud databases and temporary lists
 CACHE_DIR="/var/cache/pihole-cloud-updater"
 
