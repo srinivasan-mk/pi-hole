@@ -207,3 +207,4 @@ echo "[+] Pi-hole installed successfully!"
 echo "    Web Admin Dashboard: http://${HOST_IP:-$(hostname -I | awk '{print $1}')}/admin"
 echo "    DNS Server IP      : ${HOST_IP:-$(hostname -I | awk '{print $1}')}"
 echo "============================================================"
+

@@ -136,3 +136,4 @@ echo "    Config file : /etc/pihole-updatelists.conf"
 echo "    Custom list : /etc/pihole/custom-blocklists.list"
 echo "    Run manually: sudo /usr/local/sbin/pihole-updatelists"
 echo "============================================================"
+
