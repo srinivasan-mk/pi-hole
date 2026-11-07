@@ -114,6 +114,16 @@ sudo bash scripts/install-pihole-updatelists.sh
 sudo bash scripts/install.sh
 ```
 
+#### 4. Configure Conditional Forwarding (Reveal Device Names)
+Enables reverse DNS lookups to your router DHCP to show device names instead of IP addresses:
+```bash
+# Auto-detect router & subnet and apply:
+sudo bash scripts/configure-conditional-forwarding.sh -y
+
+# Or with custom router IP and local domain:
+sudo bash scripts/configure-conditional-forwarding.sh -r 192.168.1.1 -s 192.168.1.0/24 -d lan
+```
+
 ---
 
 ### Option C: Remote Deployment from Windows (PowerShell)
@@ -124,8 +134,11 @@ Deploy remotely from your Windows workstation over SSH using the included script
 # Standard configuration deployment
 .\deploy.ps1 -Hostname "pi.hole" -User "rpi4b-admin"
 
-# Complete turnkey setup: Install Pi-hole + pihole-updatelists + deploy lists
-.\deploy.ps1 -Hostname "192.168.1.100" -User "pi" -InstallPihole -InstallUpdateLists -PiholePassword "YourPassword123"
+# Enable Conditional Forwarding on existing Pi-hole:
+.\deploy.ps1 -Hostname "pi.hole" -User "rpi4b-admin" -ConditionalForwarding
+
+# Complete turnkey setup: Install Pi-hole + Conditional Forwarding + Lists
+.\deploy.ps1 -Hostname "192.168.1.100" -User "pi" -InstallPihole -ConditionalForwarding -InstallUpdateLists -PiholePassword "YourPassword123"
 ```
 
 ---
@@ -168,6 +181,7 @@ GDRIVE_SQLITE_QUERY_WHITELISTS="SELECT domain FROM whitelist WHERE active = 1"
 │   ├── install-pihole.sh                   # Automated/unattended Pi-hole installer
 │   ├── install-pihole-updatelists.sh       # Automated pihole-updatelists (jacklul) installer
 │   ├── install.sh                          # Standalone installer for pihole-cloud-updater
+│   ├── configure-conditional-forwarding.sh # Configures router PTR/local forwarding for client names
 │   ├── install-chrome.sh                   # Minimal Chromium browser installer for Pi OS Lite
 │   ├── pihole-cloud-updater.py             # Python 3 engine for cloud list parsing & gravity sync
 │   └── pihole-cloud-updater                # CLI launcher executable

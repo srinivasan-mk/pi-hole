@@ -13,10 +13,20 @@
     If specified, installs jacklul's pihole-updatelists and PHP dependencies
 .PARAMETER PiholePassword
     Custom password to set for Pi-hole Web Admin GUI
+.PARAMETER ConditionalForwarding
+    If specified, enables Conditional Forwarding to resolve local client/device names
+.PARAMETER RouterIp
+    Router / DHCP server IP for Conditional Forwarding (auto-detected if omitted)
+.PARAMETER LocalSubnet
+    Local subnet in CIDR notation (e.g. 192.168.1.0/24)
+.PARAMETER LocalDomain
+    Local domain name (default: lan)
 .EXAMPLE
     .\deploy.ps1
 .EXAMPLE
     .\deploy.ps1 -Hostname 192.168.1.100 -User pi -InstallPihole -InstallUpdateLists
+.EXAMPLE
+    .\deploy.ps1 -Hostname pi.hole -User rpi4b-admin -ConditionalForwarding
 .EXAMPLE
     .\deploy.ps1 -Hostname pi.hole -User rpi4b-admin -PiholePassword "MySecurePass123"
 #>
@@ -26,7 +36,11 @@ param(
     [string]$User = "rpi4b-admin",
     [switch]$InstallPihole,
     [switch]$InstallUpdateLists,
-    [string]$PiholePassword = ""
+    [string]$PiholePassword = "",
+    [switch]$ConditionalForwarding,
+    [string]$RouterIp = "",
+    [string]$LocalSubnet = "",
+    [string]$LocalDomain = "lan"
 )
 
 $ErrorActionPreference = "Stop"
@@ -42,6 +56,7 @@ $updaterPy = Join-Path $scriptsDir "pihole-cloud-updater.py"
 $updaterSh = Join-Path $scriptsDir "pihole-cloud-updater"
 $installPiholeSh = Join-Path $scriptsDir "install-pihole.sh"
 $installUpdateListsSh = Join-Path $scriptsDir "install-pihole-updatelists.sh"
+$condFwdSh = Join-Path $scriptsDir "configure-conditional-forwarding.sh"
 
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host "  Remote Pi-hole Deployment to ${User}@${Hostname}" -ForegroundColor Cyan
@@ -56,6 +71,7 @@ if (Test-Path $updaterPy) { scp $updaterPy "${User}@${Hostname}:/tmp/pihole-clou
 if (Test-Path $updaterSh) { scp $updaterSh "${User}@${Hostname}:/tmp/pihole-cloud-updater" }
 if (Test-Path $installPiholeSh) { scp $installPiholeSh "${User}@${Hostname}:/tmp/install-pihole.sh" }
 if (Test-Path $installUpdateListsSh) { scp $installUpdateListsSh "${User}@${Hostname}:/tmp/install-pihole-updatelists.sh" }
+if (Test-Path $condFwdSh) { scp $condFwdSh "${User}@${Hostname}:/tmp/configure-conditional-forwarding.sh" }
 
 # 2. Build remote command string
 $commands = @()
@@ -65,8 +81,15 @@ $commands += "sudo chmod +x /tmp/*.sh /tmp/pihole-cloud-updater 2>/dev/null || t
 # Optional: Install Pi-hole
 if ($InstallPihole) {
     Write-Host "[*] Will install Pi-hole on remote host..." -ForegroundColor Yellow
-    $pwdArg = if ($PiholePassword) { "-p `"$PiholePassword`"" } else { "" }
-    $commands += "sudo /tmp/install-pihole.sh -y $pwdArg"
+    $piholeArgs = @("-y")
+    if ($PiholePassword) { $piholeArgs += "-p `"$PiholePassword`"" }
+    if ($ConditionalForwarding) {
+        $piholeArgs += "--cf"
+        if ($RouterIp) { $piholeArgs += "--router-ip `"$RouterIp`"" }
+        if ($LocalSubnet) { $piholeArgs += "--local-subnet `"$LocalSubnet`"" }
+        if ($LocalDomain) { $piholeArgs += "--local-domain `"$LocalDomain`"" }
+    }
+    $commands += "sudo /tmp/install-pihole.sh $($piholeArgs -join ' ')"
 }
 
 # Optional: Install pihole-updatelists
@@ -86,6 +109,16 @@ $commands += "(test -f /tmp/pihole-cloud-updater && sudo cp /tmp/pihole-cloud-up
 # Optional custom password set if Pi-hole is already installed
 if ($PiholePassword -and -not $InstallPihole) {
     $commands += "sudo pihole -a -p `"$PiholePassword`""
+}
+
+# Optional: Enable Conditional Forwarding on existing Pi-hole
+if ($ConditionalForwarding -and -not $InstallPihole) {
+    Write-Host "[*] Configuring Conditional Forwarding on remote host..." -ForegroundColor Yellow
+    $cfArgs = @("-y")
+    if ($RouterIp) { $cfArgs += "-r `"$RouterIp`"" }
+    if ($LocalSubnet) { $cfArgs += "-s `"$LocalSubnet`"" }
+    if ($LocalDomain) { $cfArgs += "-d `"$LocalDomain`"" }
+    $commands += "sudo /tmp/configure-conditional-forwarding.sh $($cfArgs -join ' ')"
 }
 
 # Run synchronization

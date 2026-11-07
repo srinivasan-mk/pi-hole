@@ -7,6 +7,8 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # Default settings (can be overridden by environment variables or CLI flags)
 UNATTENDED=false
 PIHOLE_PASSWORD="${PIHOLE_PASSWORD:-}"
@@ -16,6 +18,10 @@ DNS_3="${DNS_3:-9.9.9.9}"      # Quad9 fallback
 INTERFACE="${PIHOLE_INTERFACE:-}"
 STATIC_IP="${PIHOLE_STATIC_IP:-}"
 GATEWAY="${PIHOLE_GATEWAY:-}"
+ENABLE_CF="${PIHOLE_CONDITIONAL_FORWARDING:-false}"
+ROUTER_IP="${PIHOLE_ROUTER_IP:-}"
+LOCAL_SUBNET="${PIHOLE_LOCAL_SUBNET:-}"
+LOCAL_DOMAIN="${PIHOLE_LOCAL_DOMAIN:-lan}"
 
 # Parse command line options
 while [[ $# -gt 0 ]]; do
@@ -40,16 +46,39 @@ while [[ $# -gt 0 ]]; do
             DNS_2="$2"
             shift 2
             ;;
+        --cf|--conditional-forwarding)
+            ENABLE_CF=true
+            shift
+            ;;
+        --router-ip)
+            ROUTER_IP="$2"
+            ENABLE_CF=true
+            shift 2
+            ;;
+        --local-subnet)
+            LOCAL_SUBNET="$2"
+            ENABLE_CF=true
+            shift 2
+            ;;
+        --local-domain)
+            LOCAL_DOMAIN="$2"
+            ENABLE_CF=true
+            shift 2
+            ;;
         -h|--help)
             echo "Usage: sudo bash $0 [OPTIONS]"
             echo ""
             echo "Options:"
-            echo "  -y, --unattended     Run completely unattended with auto-detected network settings"
-            echo "  -p, --password PWD   Set custom admin Web GUI password"
-            echo "  -i, --interface IF   Network interface (e.g. eth0, wlan0) [auto-detected if omitted]"
-            echo "  --dns1 IP            Primary upstream DNS server (default: 1.1.1.1)"
-            echo "  --dns2 IP            Secondary upstream DNS server (default: 1.0.0.1)"
-            echo "  -h, --help           Show this help message"
+            echo "  -y, --unattended         Run completely unattended with auto-detected network settings"
+            echo "  -p, --password PWD       Set custom admin Web GUI password"
+            echo "  -i, --interface IF       Network interface (e.g. eth0, wlan0) [auto-detected if omitted]"
+            echo "  --dns1 IP                Primary upstream DNS server (default: 1.1.1.1)"
+            echo "  --dns2 IP                Secondary upstream DNS server (default: 1.0.0.1)"
+            echo "  --cf                     Enable Conditional Forwarding to reveal client names"
+            echo "  --router-ip IP           Router IP for Conditional Forwarding (default: auto-detected)"
+            echo "  --local-subnet CIDR      Local subnet in CIDR notation (default: auto-detected)"
+            echo "  --local-domain DOMAIN    Local domain name (default: lan)"
+            echo "  -h, --help               Show this help message"
             exit 0
             ;;
         *)
@@ -87,6 +116,14 @@ if command -v pihole >/dev/null 2>&1; then
         pihole -a -p "${PIHOLE_PASSWORD}"
     fi
 
+    if [ "${ENABLE_CF}" = true ] && [ -f "${SCRIPT_DIR}/configure-conditional-forwarding.sh" ]; then
+        echo "[*] Configuring Conditional Forwarding..."
+        bash "${SCRIPT_DIR}/configure-conditional-forwarding.sh" -y \
+            ${ROUTER_IP:+-r "$ROUTER_IP"} \
+            ${LOCAL_SUBNET:+-s "$LOCAL_SUBNET"} \
+            ${LOCAL_DOMAIN:+-d "$LOCAL_DOMAIN"}
+    fi
+
     echo "[+] Pi-hole setup complete."
     exit 0
 fi
@@ -108,16 +145,13 @@ fi
 
 # Detect primary network interface and IP
 if [ -z "${INTERFACE}" ]; then
-    # Discover default route interface
     INTERFACE=$(ip route show default 2>/dev/null | awk '/default/ {print $5}' | head -n1 || true)
     if [ -z "${INTERFACE}" ]; then
-        # Fallback to first non-loopback interface with an IPv4 address
         INTERFACE=$(ip -4 -o addr show scope global | awk '{print $2}' | head -n1 || echo "eth0")
     fi
 fi
 
 if [ -z "${STATIC_IP}" ]; then
-    # Auto-detect IP with CIDR subnet
     STATIC_IP=$(ip -4 -o addr show dev "${INTERFACE}" scope global | awk '{print $4}' | head -n1 || true)
 fi
 
@@ -125,11 +159,28 @@ if [ -z "${GATEWAY}" ]; then
     GATEWAY=$(ip route show default dev "${INTERFACE}" 2>/dev/null | awk '/default/ {print $3}' | head -n1 || true)
 fi
 
+# Compute subnet if conditional forwarding requested
+if [ -z "${ROUTER_IP}" ]; then
+    ROUTER_IP="${GATEWAY}"
+fi
+
+if [ -z "${LOCAL_SUBNET}" ]; then
+    LOCAL_SUBNET=$(ip -4 route show dev "${INTERFACE}" scope link 2>/dev/null | awk '{print $1}' | head -n1 || true)
+    if [ -z "${LOCAL_SUBNET}" ] || [[ ! "${LOCAL_SUBNET}" =~ / ]]; then
+        IP_BASE=$(echo "${STATIC_IP}" | cut -d'/' -f1 | awk -F. '{print $1"."$2"."$3".0"}')
+        MASK=$(echo "${STATIC_IP}" | cut -d'/' -f2)
+        LOCAL_SUBNET="${IP_BASE}/${MASK}"
+    fi
+fi
+
 echo "[*] Network configuration detected:"
 echo "    Interface : ${INTERFACE}"
 echo "    IPv4/CIDR : ${STATIC_IP:-unknown}"
 echo "    Gateway   : ${GATEWAY:-unknown}"
 echo "    Upstream  : ${DNS_1}, ${DNS_2}"
+if [ "${ENABLE_CF}" = true ]; then
+    echo "    Cond. Fwd : Enabled -> Router: ${ROUTER_IP}, Subnet: ${LOCAL_SUBNET}, Domain: ${LOCAL_DOMAIN}"
+fi
 
 # Prepare automated setupVars.conf if unattended mode is requested
 mkdir -p /etc/pihole
@@ -150,6 +201,14 @@ LIGHTTPD_ENABLED=true
 CACHE_SIZE=10000
 BLOCKING_ENABLED=true
 EOF
+    if [ "${ENABLE_CF}" = true ]; then
+        cat >> /etc/pihole/setupVars.conf << EOF
+CONDITIONAL_FORWARDING=true
+CONDITIONAL_FORWARDING_IP=${ROUTER_IP}
+CONDITIONAL_FORWARDING_DOMAIN=${LOCAL_DOMAIN}
+CONDITIONAL_FORWARDING_REVERSE=${LOCAL_SUBNET}
+EOF
+    fi
     chmod 644 /etc/pihole/setupVars.conf
 
     echo "[*] Running official Pi-hole unattended installer..."
@@ -169,7 +228,6 @@ if [ -n "${PIHOLE_PASSWORD}" ]; then
     pihole -a -p "${PIHOLE_PASSWORD}"
     echo "[+] Admin password set successfully."
 else
-    # Generate random 12-char secure password if none provided in unattended mode
     if [ "${UNATTENDED}" = true ]; then
         GEN_PWD=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 12 ; echo '')
         pihole -a -p "${GEN_PWD}"
@@ -178,7 +236,21 @@ else
     fi
 fi
 
-# Configure firewall rules if UFW is installed and active
+# Configure Conditional Forwarding drop-in if requested
+if [ "${ENABLE_CF}" = true ]; then
+    echo "[*] Setting up Conditional Forwarding in /etc/dnsmasq.d/02-conditional-forwarding.conf..."
+    mkdir -p /etc/dnsmasq.d
+    cat > /etc/dnsmasq.d/02-conditional-forwarding.conf << EOF
+# Conditional Forwarding for local reverse PTR and local domain queries
+rev-server=${LOCAL_SUBNET},${ROUTER_IP}
+server=/${LOCAL_DOMAIN}/${ROUTER_IP}
+EOF
+    chmod 644 /etc/dnsmasq.d/02-conditional-forwarding.conf
+    pihole restartdns
+    echo "[+] Conditional Forwarding configured."
+fi
+
+# Configure firewall rules if UFW is active
 if command -v ufw >/dev/null 2>&1 && ufw status | grep -q "Status: active"; then
     echo "[*] Configuring UFW firewall rules for Pi-hole..."
     ufw allow 53/tcp comment "Pi-hole DNS"
@@ -206,5 +278,7 @@ echo "============================================================"
 echo "[+] Pi-hole installed successfully!"
 echo "    Web Admin Dashboard: http://${HOST_IP:-$(hostname -I | awk '{print $1}')}/admin"
 echo "    DNS Server IP      : ${HOST_IP:-$(hostname -I | awk '{print $1}')}"
+if [ "${ENABLE_CF}" = true ]; then
+    echo "    Conditional Fwd    : Active -> Router (${ROUTER_IP}) for *.${LOCAL_DOMAIN} & ${LOCAL_SUBNET}"
+fi
 echo "============================================================"
-

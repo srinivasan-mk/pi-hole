@@ -13,6 +13,8 @@ SYSTEMD_DIR="/etc/systemd/system"
 AUTO_YES=false
 INSTALL_PIHOLE_FLAG=false
 
+ENABLE_CF=false
+
 # Parse flags
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -22,6 +24,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --install-pihole)
             INSTALL_PIHOLE_FLAG=true
+            shift
+            ;;
+        --cf|--conditional-forwarding)
+            ENABLE_CF=true
             shift
             ;;
         *)
@@ -148,6 +154,12 @@ if command -v systemctl >/dev/null 2>&1 && [ -d "${SYSTEMD_DIR}" ]; then
         systemctl enable --now pihole-cloud-updater.timer
         echo "[+] Systemd automated sync timer active (runs daily at 03:30 AM)."
     fi
+fi
+
+# Optional: Configure Conditional Forwarding
+if [ "${ENABLE_CF}" = true ] && [ -f "${SCRIPTS_DIR}/configure-conditional-forwarding.sh" ]; then
+    echo "[*] Configuring Conditional Forwarding..."
+    bash "${SCRIPTS_DIR}/configure-conditional-forwarding.sh" $([ "${AUTO_YES}" = true ] && echo "-y" || echo "")
 fi
 
 echo "[+] Configuration files deployed successfully."
