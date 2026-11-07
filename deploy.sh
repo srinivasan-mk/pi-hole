@@ -10,6 +10,25 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_DIR="${SCRIPT_DIR}/config"
 SCRIPTS_DIR="${SCRIPT_DIR}/scripts"
 SYSTEMD_DIR="/etc/systemd/system"
+AUTO_YES=false
+INSTALL_PIHOLE_FLAG=false
+
+# Parse flags
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -y|--yes|--unattended)
+            AUTO_YES=true
+            shift
+            ;;
+        --install-pihole)
+            INSTALL_PIHOLE_FLAG=true
+            shift
+            ;;
+        *)
+            shift
+            ;;
+    esac
+done
 
 echo "============================================================"
 echo "  Pi-hole Cloud Lists & Updater Deployment"
@@ -24,8 +43,28 @@ fi
 
 # Check Pi-hole installation
 if ! command -v pihole >/dev/null 2>&1; then
-    echo "[-] Error: Pi-hole is not installed on this system."
-    exit 1
+    echo "[-] Warning: Pi-hole is not installed on this system."
+    INSTALL_PIHOLE=false
+    if [ "${AUTO_YES}" = true ] || [ "${INSTALL_PIHOLE_FLAG}" = true ]; then
+        INSTALL_PIHOLE=true
+    else
+        read -r -p "Would you like to install Pi-hole now? [Y/n]: " choice || choice="Y"
+        if [[ "$choice" =~ ^[Yy]?$ ]]; then
+            INSTALL_PIHOLE=true
+        fi
+    fi
+
+    if [ "${INSTALL_PIHOLE}" = true ]; then
+        echo "[*] Launching Pi-hole installer (scripts/install-pihole.sh)..."
+        if [ -f "${SCRIPTS_DIR}/install-pihole.sh" ]; then
+            bash "${SCRIPTS_DIR}/install-pihole.sh" $([ "${AUTO_YES}" = true ] && echo "-y" || echo "")
+        else
+            curl -sSL https://install.pi-hole.net | bash
+        fi
+    else
+        echo "[-] Error: Pi-hole is required to proceed. Aborting."
+        exit 1
+    fi
 fi
 
 echo "[+] Pi-hole detected:"
@@ -33,7 +72,7 @@ pihole -v
 
 # Ensure Python 3 is installed for pihole-cloud-updater
 if ! command -v python3 >/dev/null 2>&1; then
-    echo "[*] python3 not found. Installing via apt-get..."
+    echo "[*] python3 not found. Installing via package manager..."
     if command -v apt-get >/dev/null 2>&1; then
         apt-get update -y && apt-get install -y python3 python3-sqlite3
     fi
@@ -55,10 +94,14 @@ if [ -f "${SCRIPTS_DIR}/pihole-cloud-updater" ]; then
     chmod 755 /usr/local/sbin/pihole-cloud-updater
 fi
 
-# 2. Also keep pihole-updatelists for backward compatibility
+# 2. Also ensure pihole-updatelists is installed
 if [ ! -f "/usr/local/sbin/pihole-updatelists" ]; then
     echo "[*] Installing classic pihole-updatelists (jacklul)..."
-    wget -qO - https://raw.githubusercontent.com/jacklul/pihole-updatelists/master/install.sh | bash || true
+    if [ -f "${SCRIPTS_DIR}/install-pihole-updatelists.sh" ]; then
+        bash "${SCRIPTS_DIR}/install-pihole-updatelists.sh" || true
+    else
+        wget -qO - https://raw.githubusercontent.com/jacklul/pihole-updatelists/master/install.sh | bash || true
+    fi
 fi
 
 # Ensure /etc/pihole directory exists

@@ -83,20 +83,49 @@ sudo bash deploy.sh
 ```
 
 `deploy.sh` automatically:
-1. Verifies Pi-hole installation and Python 3.
-2. Installs `pihole-cloud-updater` to `/usr/local/sbin/pihole-cloud-updater`.
-3. Sets up automated systemd timer (`pihole-cloud-updater.timer`).
+1. Verifies Pi-hole installation (offers automated installation if missing).
+2. Installs `pihole-cloud-updater` and `pihole-updatelists`.
+3. Sets up automated systemd timer (`pihole-cloud-updater.timer`) or cron.
 4. Creates backups and deploys configuration files.
-5. Runs `pihole-cloud-updater` to synchronize all lists and reload gravity.
+5. Runs the updater to synchronize all lists and reload gravity.
 
 ---
 
-### Option B: Remote Deployment from Windows (PowerShell)
+### Option B: Dedicated Standalone Installers
+
+If you prefer installing individual components step-by-step:
+
+#### 1. Install Pi-hole (Interactive or Unattended)
+```bash
+# Interactive guided install
+sudo bash scripts/install-pihole.sh
+
+# Unattended automated install with custom password
+sudo bash scripts/install-pihole.sh -y -p "YourStrongPassword"
+```
+
+#### 2. Install pihole-updatelists (jacklul) & Curated Lists
+```bash
+sudo bash scripts/install-pihole-updatelists.sh
+```
+
+#### 3. Install pihole-cloud-updater (Google Sheets / GDrive SQLite support)
+```bash
+sudo bash scripts/install.sh
+```
+
+---
+
+### Option C: Remote Deployment from Windows (PowerShell)
 
 Deploy remotely from your Windows workstation over SSH using the included script:
 
 ```powershell
+# Standard configuration deployment
 .\deploy.ps1 -Hostname "pi.hole" -User "rpi4b-admin"
+
+# Complete turnkey setup: Install Pi-hole + pihole-updatelists + deploy lists
+.\deploy.ps1 -Hostname "192.168.1.100" -User "pi" -InstallPihole -InstallUpdateLists -PiholePassword "YourPassword123"
 ```
 
 ---
@@ -136,14 +165,18 @@ GDRIVE_SQLITE_QUERY_WHITELISTS="SELECT domain FROM whitelist WHERE active = 1"
 │   ├── pihole-cloud-updater.md             # Comprehensive cloud updater & configuration manual
 │   └── pihole-analysis.md                  # In-depth analysis of lists, metrics, and comparisons
 ├── scripts/
+│   ├── install-pihole.sh                   # Automated/unattended Pi-hole installer
+│   ├── install-pihole-updatelists.sh       # Automated pihole-updatelists (jacklul) installer
+│   ├── install.sh                          # Standalone installer for pihole-cloud-updater
+│   ├── install-chrome.sh                   # Minimal Chromium browser installer for Pi OS Lite
 │   ├── pihole-cloud-updater.py             # Python 3 engine for cloud list parsing & gravity sync
-│   ├── pihole-cloud-updater                # CLI launcher executable
-│   └── install.sh                          # Standalone installer for the cloud updater
+│   └── pihole-cloud-updater                # CLI launcher executable
 ├── systemd/
 │   ├── pihole-cloud-updater.service        # Systemd service unit
 │   └── pihole-cloud-updater.timer          # Systemd daily automation timer (03:30 AM)
 ├── deploy.sh                               # Turnkey deployment script for Linux/Pi
 ├── deploy.ps1                              # Remote deployment script for Windows PowerShell
+├── deploy-chrome.ps1                       # Remote Chromium deployment script for Windows PowerShell
 ├── .gitattributes                          # Enforces Linux LF line-endings for config files
 └── README.md                               # Project documentation
 ```
