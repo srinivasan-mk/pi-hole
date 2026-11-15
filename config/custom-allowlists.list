@@ -1,0 +1,7 @@
+# Custom Allowlist / Antigravity Feeds (Pi-hole v6)
+# Managed via pihole-updatelists (ALLOWLISTS_URL)
+# Updated: 2026-11-15
+
+# HaGeZi URL Shortener - unblocks legitimate link shorteners (t.co, bit.ly, etc.)
+https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/whitelist-urlshortener.txt
+

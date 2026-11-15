@@ -1,0 +1,28 @@
+# India-Specific Regex Blacklist for Pi-hole
+# Targets Indian ad networks, tracking patterns, and phishing infrastructure
+# Updated: 2026-11-08
+#
+# CAUTION: Monitor query logs after enabling. Some patterns may cause
+# false positives on legitimate services. Disable individual rules if needed.
+
+# InMobi ad network (major Indian mobile ad platform)
+(^|\.)inmobi(ads)?\.(com|net|in|co\.in)$
+
+# Vserv mobile ad network (Indian mobile advertising)
+(^|\.)(vserv(ids|ads|mobi)?)\.(com|mobi|net|in)$
+
+# MoPub (legacy ad SDK, still queried by some Indian apps)
+(^|\.)mopub\.(com|net)$
+
+# Generic ad-serving subdomains (catches Indian + global patterns)
+^adse?rv(er?|ice)?s?[0-9]*[-.]
+
+# Generic tracking subdomains
+^track(er|ing)?[-.]
+
+# Generic analytics subdomains
+^analytics?[-.]
+
+# Generic telemetry endpoints
+^telemetry[-.]
+

@@ -1,5 +1,6 @@
 # Additional Curated Blocklists for Pi-hole
 # Managed via pihole-updatelists (/etc/pihole/custom-blocklists.list)
+# Updated: 2026-11-08
 
 # ========================================================
 # === INDIA REGIONAL ADS, TRACKERS & TELEMETRY ===
@@ -9,12 +10,22 @@
 # portals (Times of India, NDTV, regional news), and local ad networks
 https://easylist-downloads.adblockplus.org/indianlist.txt
 
+# IndiaBlock (sudotman) - Indian web ads, malicious redirects,
+# ISP-level ad injection, regional ad networks (InMobi, Vserv, etc.)
+https://raw.githubusercontent.com/sudotman/indianadblock/master/indiablock.txt
+
 # GoodbyeAds (by jerryn70) - Extensively targets mobile app ads,
 # in-app SDK trackers, Indian OTT/streaming telemetry, and ad servers
 https://raw.githubusercontent.com/jerryn70/GoodbyeAds/master/Hosts/GoodbyeAds.txt
 
 # GoodbyeAds Xiaomi / Mi TV Extension (MIUI tracking & smart TV ads)
 https://raw.githubusercontent.com/jerryn70/GoodbyeAds/master/Extension/GoodbyeAds-Xiaomi-Extension.txt
+
+# GoodbyeAds Samsung Extension (Samsung-specific ad SDKs & trackers)
+https://raw.githubusercontent.com/jerryn70/GoodbyeAds/master/Extension/GoodbyeAds-Samsung-AdBlock.txt
+
+# GoodbyeAds YouTube Extension (YouTube ad serving domains)
+https://raw.githubusercontent.com/jerryn70/GoodbyeAds/master/Extension/GoodbyeAds-YouTube-AdBlock.txt
 
 # HaGeZi Native Xiaomi - Xiaomi smartphone and Mi TV telemetry
 https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/native.xiaomi.txt
@@ -24,6 +35,9 @@ https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/native.oppo-rea
 
 # HaGeZi Native Vivo - Vivo mobile telemetry
 https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/native.vivo.txt
+
+# HaGeZi Native Huawei - Huawei/Honor device telemetry (popular in India)
+https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/native.huawei.txt
 
 
 # ========================================================
@@ -35,6 +49,10 @@ https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/dyndns.txt
 
 # HaGeZi Anti-Piracy - blocks illegal streaming, warez, and torrent networks
 https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/anti.piracy.txt
+
+# HaGeZi Pop-Up Ads - malicious pop-ups, overlays, push notification spam
+# Effective against Indian news site pop-ups and clickbait redirects
+https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/popupads.txt
 
 
 # ========================================================
@@ -58,6 +76,9 @@ https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/native.lgwebos.
 
 # TikTok tracking & metrics
 https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/native.tiktok.txt
+
+# TikTok Extended - additional fingerprinting & analytics endpoints
+https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/native.tiktok.extended.txt
 
 
 # ========================================================
@@ -92,5 +113,28 @@ https://www.github.developerdan.com/hosts/lists/amp-hosts-extended.txt
 # 1Hosts Lite - high quality modern tracking & ad blocking
 https://badmojr.github.io/1Hosts/Lite/adblock.txt
 
+# 1Hosts Xtra - aggressive modern tracking & ad blocking (superset of Lite)
+https://badmojr.github.io/1Hosts/Xtra/adblock.txt
+
 # Dandelion Sprout Game Console AdblockList (PlayStation, Xbox, Nintendo)
 https://raw.githubusercontent.com/DandelionSprout/adfilt/master/GameConsoleAdblockList.txt
+
+
+# ========================================================
+# === PHISHING, SCAM & FRAUD PROTECTION ===
+# ========================================================
+
+# Blocklistproject Phishing - phishing sites including UPI/banking phishing
+https://blocklistproject.github.io/Lists/phishing.txt
+
+# Blocklistproject Scam - scam sites including predatory loan landing pages
+https://blocklistproject.github.io/Lists/scam.txt
+
+# Blocklistproject Fraud - financial fraud domains
+https://blocklistproject.github.io/Lists/fraud.txt
+
+# Blocklistproject Malware - malware distribution (loan APK links etc.)
+https://blocklistproject.github.io/Lists/malware.txt
+
+# Blocklistproject Ransomware - ransomware C2 infrastructure
+https://blocklistproject.github.io/Lists/ransomware.txt

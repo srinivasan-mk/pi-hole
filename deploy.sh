@@ -129,6 +129,38 @@ if [ -f "${CONFIG_DIR}/custom-blocklists.list" ]; then
     sed -i 's/\r$//' /etc/pihole/custom-blocklists.list
 fi
 
+# Deploy custom-allowlists.list
+if [ -f "${CONFIG_DIR}/custom-allowlists.list" ]; then
+    echo "[*] Installing /etc/pihole/custom-allowlists.list..."
+    cp "${CONFIG_DIR}/custom-allowlists.list" /etc/pihole/custom-allowlists.list
+    chmod 644 /etc/pihole/custom-allowlists.list
+    sed -i 's/\r$//' /etc/pihole/custom-allowlists.list
+fi
+
+# Deploy India-specific whitelist
+if [ -f "${CONFIG_DIR}/india-whitelist.list" ]; then
+    echo "[*] Installing /etc/pihole/india-whitelist.list (UPI, Banking, Govt, E-commerce)..."
+    cp "${CONFIG_DIR}/india-whitelist.list" /etc/pihole/india-whitelist.list
+    chmod 644 /etc/pihole/india-whitelist.list
+    sed -i 's/\r$//' /etc/pihole/india-whitelist.list
+fi
+
+# Deploy India-specific regex blacklist
+if [ -f "${CONFIG_DIR}/india-regex-blacklist.list" ]; then
+    echo "[*] Installing /etc/pihole/india-regex-blacklist.list..."
+    cp "${CONFIG_DIR}/india-regex-blacklist.list" /etc/pihole/india-regex-blacklist.list
+    chmod 644 /etc/pihole/india-regex-blacklist.list
+    sed -i 's/\r$//' /etc/pihole/india-regex-blacklist.list
+fi
+
+# Deploy India-specific regex whitelist
+if [ -f "${CONFIG_DIR}/india-regex-whitelist.list" ]; then
+    echo "[*] Installing /etc/pihole/india-regex-whitelist.list..."
+    cp "${CONFIG_DIR}/india-regex-whitelist.list" /etc/pihole/india-regex-whitelist.list
+    chmod 644 /etc/pihole/india-regex-whitelist.list
+    sed -i 's/\r$//' /etc/pihole/india-regex-whitelist.list
+fi
+
 # Deploy pihole-cloud-updater.conf
 if [ -f "${CONFIG_DIR}/pihole-cloud-updater.conf.example" ] && [ ! -f "/etc/pihole-cloud-updater.conf" ]; then
     echo "[*] Installing /etc/pihole-cloud-updater.conf..."

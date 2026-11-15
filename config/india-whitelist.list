@@ -1,0 +1,162 @@
+# India-Specific Whitelist for Pi-hole
+# Critical domains that must NOT be blocked to avoid breaking Indian services
+# Managed via pihole-updatelists / pihole-cloud-updater
+# Updated: 2026-11-08
+
+# ========================================================
+# === UPI / PAYMENT INFRASTRUCTURE ===
+# ========================================================
+# NPCI (National Payments Corporation of India) - powers UPI, RuPay, IMPS
+npci.org.in
+upi.npci.org.in
+bhimupi.org.in
+
+# PhonePe
+phonepe.com
+api.phonepe.com
+
+# Google Pay (India)
+pay.google.com
+
+# Paytm
+paytm.com
+paytm.in
+paytmbank.com
+
+# CRED
+cred.club
+
+# Payment Gateways (used by most Indian e-commerce)
+razorpay.com
+api.razorpay.com
+cashfree.com
+payu.in
+payu.com
+billdesk.com
+ccavenue.com
+juspay.in
+
+
+# ========================================================
+# === INDIAN BANKING ===
+# ========================================================
+hdfcbank.com
+netbanking.hdfcbank.com
+onlinesbi.sbi
+sbi.co.in
+icicibank.com
+axisbank.com
+kotak.com
+kotakbank.com
+yesbank.in
+idfcfirstbank.com
+pnbindia.in
+bankofbaroda.in
+bankofindia.co.in
+canarabank.com
+unionbankofindia.co.in
+indianbank.in
+
+
+# ========================================================
+# === GOVERNMENT SERVICES ===
+# ========================================================
+# Aadhaar / UIDAI
+uidai.gov.in
+eaadhaar.uidai.gov.in
+resident.uidai.gov.in
+
+# DigiLocker
+digilocker.gov.in
+api.digitallocker.gov.in
+
+# UMANG
+umang.gov.in
+
+# CoWIN / Health
+cowin.gov.in
+api.cowin.gov.in
+
+# IRCTC Railways
+irctc.co.in
+www.irctc.co.in
+
+# Tax & Finance
+incometax.gov.in
+eportal.incometax.gov.in
+gst.gov.in
+epfindia.gov.in
+esic.gov.in
+pfms.nic.in
+
+# General Government
+nic.in
+gov.in
+india.gov.in
+mygov.in
+
+
+# ========================================================
+# === E-COMMERCE ===
+# ========================================================
+flipkart.com
+api.flipkart.com
+myntra.com
+meesho.com
+amazon.in
+ajio.com
+nykaa.com
+tatacliq.com
+jiomart.com
+bigbasket.com
+blinkit.com
+
+
+# ========================================================
+# === FOOD DELIVERY / RIDE-HAILING ===
+# ========================================================
+swiggy.com
+api.swiggy.com
+zomato.com
+olacabs.com
+uber.com
+rapido.bike
+dunzo.com
+zepto.co.in
+
+
+# ========================================================
+# === TELECOM RECHARGE & SERVICES ===
+# ========================================================
+jio.com
+my.jio.com
+airtel.in
+myairtel.in
+myvi.in
+bsnl.co.in
+selfcare.bsnl.co.in
+act.com
+
+
+# ========================================================
+# === INDIAN OTT & STREAMING ===
+# ========================================================
+# Note: Blocking ad domains for OTT breaks playback (server-side ad stitching)
+hotstar.com
+api.hotstar.com
+jiocinema.com
+sonyliv.com
+zee5.com
+mxplayer.in
+voot.com
+erosnow.com
+altbalaji.com
+
+
+# ========================================================
+# === ESSENTIAL SDK/ANALYTICS (REQUIRED BY BANKING/UPI APPS) ===
+# ========================================================
+# These are used for fraud detection and device intelligence by banking apps
+# Blocking them breaks transaction verification
+h-sdk.online-metrix.net
+
