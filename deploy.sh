@@ -14,6 +14,8 @@ AUTO_YES=false
 INSTALL_PIHOLE_FLAG=false
 
 ENABLE_CF=false
+OPTIMIZE_SD_FLAG=false
+OPTIMIZE_PROFILE="extreme"
 
 # Parse flags
 while [[ $# -gt 0 ]]; do
@@ -29,6 +31,15 @@ while [[ $# -gt 0 ]]; do
         --cf|--conditional-forwarding)
             ENABLE_CF=true
             shift
+            ;;
+        --optimize-sd)
+            OPTIMIZE_SD_FLAG=true
+            shift
+            ;;
+        --profile)
+            OPTIMIZE_PROFILE="$2"
+            OPTIMIZE_SD_FLAG=true
+            shift 2
             ;;
         *)
             shift
@@ -192,6 +203,12 @@ fi
 if [ "${ENABLE_CF}" = true ] && [ -f "${SCRIPTS_DIR}/configure-conditional-forwarding.sh" ]; then
     echo "[*] Configuring Conditional Forwarding..."
     bash "${SCRIPTS_DIR}/configure-conditional-forwarding.sh" $([ "${AUTO_YES}" = true ] && echo "-y" || echo "")
+fi
+
+# Optional: Apply SD Card & 24/7 Hardware Longevity Optimizations
+if [ "${OPTIMIZE_SD_FLAG}" = true ] && [ -f "${SCRIPTS_DIR}/optimize-sd-card.sh" ]; then
+    echo "[*] Applying SD card & hardware longevity optimizations (Profile: ${OPTIMIZE_PROFILE})..."
+    bash "${SCRIPTS_DIR}/optimize-sd-card.sh" -p "${OPTIMIZE_PROFILE}" $([ "${AUTO_YES}" = true ] && echo "-y" || echo "")
 fi
 
 echo "[+] Configuration files deployed successfully."

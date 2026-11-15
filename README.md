@@ -145,6 +145,19 @@ sudo bash scripts/configure-conditional-forwarding.sh -y
 sudo bash scripts/configure-conditional-forwarding.sh -r 192.168.1.1 -s 192.168.1.0/24 -d lan
 ```
 
+#### 5. 24/7 MicroSD Card & Hardware Longevity Optimization
+Dramatically extends SD card lifespan and prevents wear-out/corruption on 24/7 Raspberry Pis (especially Pi 4B 4GB) by batching dirty page memory buffers, delaying commit writes, mounting `/var/tmp` in tmpfs, switching systemd-journald to volatile RAM, eliminating SD swap thrashing, and batching Pi-hole database flushes:
+```bash
+# Default: Extreme / Zero-Churn (10m kernel flush, 600s commit, 60m Pi-hole DBinterval)
+sudo bash scripts/optimization/optimize-sd-card.sh -p extreme -y
+
+# Ultra-Endurance (5m flush, 300s commit, 30m Pi-hole DBinterval)
+sudo bash scripts/optimization/optimize-sd-card.sh -p ultra -y
+
+# Check live diagnostics & buffer status without modifying
+bash scripts/optimization/check-hardware-health.sh
+```
+
 ---
 
 ### Option C: Remote Deployment from Windows (PowerShell)
@@ -158,8 +171,11 @@ Deploy remotely from your Windows workstation over SSH using the included script
 # Enable Conditional Forwarding on existing Pi-hole:
 .\deploy.ps1 -Hostname "pi.hole" -User "rpi4b-admin" -ConditionalForwarding
 
-# Complete turnkey setup: Install Pi-hole + Conditional Forwarding + Lists
-.\deploy.ps1 -Hostname "192.168.1.100" -User "pi" -InstallPihole -ConditionalForwarding -InstallUpdateLists -PiholePassword "YourPassword123"
+# Deploy configurations and apply 24/7 SD card longevity optimization:
+.\deploy.ps1 -Hostname "192.168.31.32" -User "rpi4b-admin" -OptimizeSDCard
+
+# Complete turnkey setup: Install Pi-hole + Conditional Forwarding + Lists + SD Card Optimization
+.\deploy.ps1 -Hostname "192.168.1.100" -User "pi" -InstallPihole -ConditionalForwarding -InstallUpdateLists -OptimizeSDCard -PiholePassword "YourPassword123"
 ```
 
 ---

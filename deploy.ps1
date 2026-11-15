@@ -36,6 +36,8 @@ param(
     [string]$User = "rpi4b-admin",
     [switch]$InstallPihole,
     [switch]$InstallUpdateLists,
+    [switch]$OptimizeSDCard,
+    [string]$OptimizationProfile = "extreme",
     [string]$PiholePassword = "",
     [switch]$ConditionalForwarding,
     [string]$RouterIp = "",
@@ -61,6 +63,8 @@ $updaterSh = Join-Path $scriptsDir "pihole-cloud-updater"
 $installPiholeSh = Join-Path $scriptsDir "install-pihole.sh"
 $installUpdateListsSh = Join-Path $scriptsDir "install-pihole-updatelists.sh"
 $condFwdSh = Join-Path $scriptsDir "configure-conditional-forwarding.sh"
+$optimizeSdSh = Join-Path $scriptsDir "optimize-sd-card.sh"
+$optimizationDir = Join-Path $scriptsDir "optimization"
 
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host "  Remote Pi-hole Deployment to ${User}@${Hostname}" -ForegroundColor Cyan
@@ -80,11 +84,16 @@ if (Test-Path $updaterSh) { scp $updaterSh "${User}@${Hostname}:/tmp/pihole-clou
 if (Test-Path $installPiholeSh) { scp $installPiholeSh "${User}@${Hostname}:/tmp/install-pihole.sh" }
 if (Test-Path $installUpdateListsSh) { scp $installUpdateListsSh "${User}@${Hostname}:/tmp/install-pihole-updatelists.sh" }
 if (Test-Path $condFwdSh) { scp $condFwdSh "${User}@${Hostname}:/tmp/configure-conditional-forwarding.sh" }
+if (Test-Path $optimizeSdSh) { scp $optimizeSdSh "${User}@${Hostname}:/tmp/optimize-sd-card.sh" }
+if (Test-Path $optimizationDir) {
+    ssh "${User}@${Hostname}" "mkdir -p /tmp/optimization"
+    scp (Get-ChildItem -Path "$optimizationDir\*.sh").FullName "${User}@${Hostname}:/tmp/optimization/"
+}
 
 # 2. Build remote command string
 $commands = @()
-$commands += "sudo sed -i 's/\r$//' /tmp/*.sh /tmp/*.list /tmp/*.conf* 2>/dev/null || true"
-$commands += "sudo chmod +x /tmp/*.sh /tmp/pihole-cloud-updater 2>/dev/null || true"
+$commands += "sudo sed -i 's/\r$//' /tmp/*.sh /tmp/optimization/*.sh /tmp/*.list /tmp/*.conf* 2>/dev/null || true"
+$commands += "sudo chmod +x /tmp/*.sh /tmp/optimization/*.sh /tmp/pihole-cloud-updater 2>/dev/null || true"
 
 # Optional: Install Pi-hole
 if ($InstallPihole) {
@@ -104,6 +113,12 @@ if ($InstallPihole) {
 if ($InstallUpdateLists) {
     Write-Host "[*] Will install pihole-updatelists on remote host..." -ForegroundColor Yellow
     $commands += "sudo /tmp/install-pihole-updatelists.sh"
+}
+
+# Optional: Apply SD card longevity and hardware optimizations
+if ($OptimizeSDCard) {
+    Write-Host "[*] Will apply SD card & 24/7 hardware longevity optimizations (Profile: ${OptimizationProfile})..." -ForegroundColor Yellow
+    $commands += "sudo /tmp/optimize-sd-card.sh -p `"${OptimizationProfile}`" -y"
 }
 
 # Core deployment of configs and updater
