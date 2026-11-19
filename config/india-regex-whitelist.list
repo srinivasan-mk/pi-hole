@@ -1,0 +1,17 @@
+# India-Specific Regex Whitelist for Pi-hole
+# Protects critical Indian government and financial domains from being blocked
+# Updated: 2026-11-08
+
+# Protect all .gov.in domains (Indian government services)
+(^|\.)gov\.in$
+
+# Protect all .nic.in domains (National Informatics Centre)
+(^|\.)nic\.in$
+
+# Protect all .ac.in domains (Indian academic institutions)
+(^|\.)ac\.in$
+
+# Protect .bank.in and .fin.in TLDs (RBI regulated financial domains)
+(^|\.)bank\.in$
+(^|\.)fin\.in$
+

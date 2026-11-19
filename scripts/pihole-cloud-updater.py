@@ -31,6 +31,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import glob
 from typing import Dict, List, Optional, Set, Tuple
 
 VERSION = "1.0.1"
@@ -651,8 +652,24 @@ class GravitySync:
             "domain_removed": 0,
         }
 
+    def _prune_old_backups(self, max_keep: int = 1) -> None:
+        """Prunes old gravity.db backups to prevent SD card wear and storage exhaustion."""
+        try:
+            pattern = f"{self.db_path}.bak.*"
+            backups = sorted(glob.glob(pattern), key=os.path.getmtime)
+            if len(backups) > max_keep:
+                to_delete = backups[:-max_keep]
+                for old_bak in to_delete:
+                    try:
+                        os.remove(old_bak)
+                        logger.info("Pruned old gravity backup to protect SD card: %s", old_bak)
+                    except OSError as e:
+                        logger.warning("Could not remove old backup %s: %s", old_bak, e)
+        except Exception as e:
+            logger.debug("Failed during gravity backup pruning: %s", e)
+
     def backup_database(self) -> Optional[str]:
-        """Creates a timestamped backup of gravity.db."""
+        """Creates a timestamped backup of gravity.db and prunes old backups."""
         if not os.path.exists(self.db_path):
             return None
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -660,6 +677,7 @@ class GravitySync:
         try:
             shutil.copy2(self.db_path, backup_path)
             logger.info("Created gravity backup: %s", backup_path)
+            self._prune_old_backups(max_keep=1)
             return backup_path
         except Exception as e:
             logger.error("Failed to create database backup: %s", e)

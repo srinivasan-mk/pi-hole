@@ -69,9 +69,9 @@ http://urlhaus.abuse.ch/downloads/hostfile/"
 ; ------------------------------------------------------------------------------
 ; 2. WHITELISTS (Exact Domains)
 ; ------------------------------------------------------------------------------
-; Handcrafted exact domains to whitelist (e.g. anti-breakage, shopping fix)
+; Handcrafted exact domains to whitelist (e.g. anti-breakage, India UPI/banking, shopping fix)
 WHITELIST_URL="https://raw.githubusercontent.com/anudeepND/whitelist/master/domains/whitelist.txt
-https://raw.githubusercontent.com/hagezi/dns-blocklists/main/domains/whitelist-referral.txt"
+/etc/pihole/india-whitelist.list"
 
 ; Dedicated Google Sheets source for whitelisted domains
 ; GSHEET_WHITELISTS="https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit#gid=123456 | Domain"
@@ -88,8 +88,9 @@ BLACKLIST_URL="/etc/pihole/custom-blacklist.list"
 ; ------------------------------------------------------------------------------
 ; 4. REGEX WHITELISTS
 ; ------------------------------------------------------------------------------
-; Remote or local lists containing regex rules for allowlisting
-REGEX_WHITELIST_URL="https://raw.githubusercontent.com/mmotti/pihole-regex/master/whitelist.list"
+; Remote or local lists containing regex rules for allowlisting (.gov.in, .nic.in, etc.)
+REGEX_WHITELIST_URL="https://raw.githubusercontent.com/mmotti/pihole-regex/master/whitelist.list
+/etc/pihole/india-regex-whitelist.list"
 
 ; Dedicated Google Sheets source for regex whitelists
 ; GSHEET_REGEX_WHITELISTS=""
@@ -97,9 +98,10 @@ REGEX_WHITELIST_URL="https://raw.githubusercontent.com/mmotti/pihole-regex/maste
 ; ------------------------------------------------------------------------------
 ; 5. REGEX BLACKLISTS
 ; ------------------------------------------------------------------------------
-; Remote or local lists containing regex rules for blocking
+; Remote or local lists containing regex rules for blocking (InMobi, Vserv, ad patterns)
 REGEX_BLACKLIST_URL="https://raw.githubusercontent.com/mmotti/pihole-regex/master/regex.list
-https://raw.githubusercontent.com/stevejenkins/pi-hole-lists/main/regex.txt"
+https://raw.githubusercontent.com/stevejenkins/pi-hole-lists/main/regex.txt
+/etc/pihole/india-regex-blacklist.list"
 
 ; Dedicated Google Sheets source for regex blacklists
 ; GSHEET_REGEX_BLACKLISTS=""

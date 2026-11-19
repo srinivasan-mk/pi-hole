@@ -14,6 +14,8 @@ AUTO_YES=false
 INSTALL_PIHOLE_FLAG=false
 
 ENABLE_CF=false
+OPTIMIZE_SD_FLAG=false
+OPTIMIZE_PROFILE="extreme"
 
 # Parse flags
 while [[ $# -gt 0 ]]; do
@@ -29,6 +31,15 @@ while [[ $# -gt 0 ]]; do
         --cf|--conditional-forwarding)
             ENABLE_CF=true
             shift
+            ;;
+        --optimize-sd)
+            OPTIMIZE_SD_FLAG=true
+            shift
+            ;;
+        --profile)
+            OPTIMIZE_PROFILE="$2"
+            OPTIMIZE_SD_FLAG=true
+            shift 2
             ;;
         *)
             shift
@@ -137,6 +148,38 @@ if [ -f "${CONFIG_DIR}/custom-blacklist.list" ]; then
     sed -i 's/\r$//' /etc/pihole/custom-blacklist.list
 fi
 
+# Deploy custom-allowlists.list
+if [ -f "${CONFIG_DIR}/custom-allowlists.list" ]; then
+    echo "[*] Installing /etc/pihole/custom-allowlists.list..."
+    cp "${CONFIG_DIR}/custom-allowlists.list" /etc/pihole/custom-allowlists.list
+    chmod 644 /etc/pihole/custom-allowlists.list
+    sed -i 's/\r$//' /etc/pihole/custom-allowlists.list
+fi
+
+# Deploy India-specific whitelist
+if [ -f "${CONFIG_DIR}/india-whitelist.list" ]; then
+    echo "[*] Installing /etc/pihole/india-whitelist.list (UPI, Banking, Govt, E-commerce)..."
+    cp "${CONFIG_DIR}/india-whitelist.list" /etc/pihole/india-whitelist.list
+    chmod 644 /etc/pihole/india-whitelist.list
+    sed -i 's/\r$//' /etc/pihole/india-whitelist.list
+fi
+
+# Deploy India-specific regex blacklist
+if [ -f "${CONFIG_DIR}/india-regex-blacklist.list" ]; then
+    echo "[*] Installing /etc/pihole/india-regex-blacklist.list..."
+    cp "${CONFIG_DIR}/india-regex-blacklist.list" /etc/pihole/india-regex-blacklist.list
+    chmod 644 /etc/pihole/india-regex-blacklist.list
+    sed -i 's/\r$//' /etc/pihole/india-regex-blacklist.list
+fi
+
+# Deploy India-specific regex whitelist
+if [ -f "${CONFIG_DIR}/india-regex-whitelist.list" ]; then
+    echo "[*] Installing /etc/pihole/india-regex-whitelist.list..."
+    cp "${CONFIG_DIR}/india-regex-whitelist.list" /etc/pihole/india-regex-whitelist.list
+    chmod 644 /etc/pihole/india-regex-whitelist.list
+    sed -i 's/\r$//' /etc/pihole/india-regex-whitelist.list
+fi
+
 # Deploy pihole-cloud-updater.conf
 if [ -f "${CONFIG_DIR}/pihole-cloud-updater.conf.example" ] && [ ! -f "/etc/pihole-cloud-updater.conf" ]; then
     echo "[*] Installing /etc/pihole-cloud-updater.conf..."
@@ -173,6 +216,12 @@ fi
 if [ "${ENABLE_CF}" = true ] && [ -f "${SCRIPTS_DIR}/configure-conditional-forwarding.sh" ]; then
     echo "[*] Configuring Conditional Forwarding..."
     bash "${SCRIPTS_DIR}/configure-conditional-forwarding.sh" $([ "${AUTO_YES}" = true ] && echo "-y" || echo "")
+fi
+
+# Optional: Apply SD Card & 24/7 Hardware Longevity Optimizations
+if [ "${OPTIMIZE_SD_FLAG}" = true ] && [ -f "${SCRIPTS_DIR}/optimize-sd-card.sh" ]; then
+    echo "[*] Applying SD card & hardware longevity optimizations (Profile: ${OPTIMIZE_PROFILE})..."
+    bash "${SCRIPTS_DIR}/optimize-sd-card.sh" -p "${OPTIMIZE_PROFILE}" $([ "${AUTO_YES}" = true ] && echo "-y" || echo "")
 fi
 
 echo "[+] Configuration files deployed successfully."

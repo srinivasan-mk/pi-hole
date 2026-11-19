@@ -42,31 +42,52 @@ For full documentation and advanced options, see [docs/pihole-cloud-updater.md](
 └──────┬───────┘     └──────┬───────┘    └──────┬───────┘
        │                    │                   │
        ├─ Google Sheets     ├─ Google Sheets    ├─ mmotti regex
-       ├─ GDrive SQLite     ├─ anudeepND Safe   └─ Steve Jenkins
-       ├─ Firebog LoL       └─ HaGeZi Referral
-       ├─ Steve Jenkins        (Shopping fix)
-       └─ custom-blocklists.list
+       ├─ GDrive SQLite     ├─ anudeepND Safe   ├─ Steve Jenkins
+       ├─ Firebog LoL       ├─ HaGeZi Referral  ├─ 🇮🇳 India regex
+       ├─ Steve Jenkins     │   (Shopping fix)  │   blacklist
+       ├─ custom-blocklists ├─ HaGeZi URL       └─ 🇮🇳 India regex
+       │   .list            │   Shortener           whitelist
+       └─ Blocklistproject  └─ 🇮🇳 India whitelist
+          (Phishing/Scam/      (UPI/Banking/
+           Fraud/Malware)       Govt/E-commerce)
 ```
 
 ### Curated Custom Blocklists (`config/custom-blocklists.list`)
 
 * **🇮🇳 India Regional Ads & Trackers:**
   * **EasyList IndianList:** Official regional filter for Indian news portals (Times of India, NDTV, Dainik Bhaskar, etc.) and domestic ad networks.
-  * **GoodbyeAds (jerryn70):** In-app ad SDK and analytics blockers heavily used in Indian Android apps.
+  * **IndiaBlock (sudotman):** Regional web ads, malicious redirects, ISP-level ad injection, Indian ad networks (InMobi, Vserv).
+  * **GoodbyeAds (jerryn70):** In-app ad SDK and analytics blockers heavily used in Indian Android apps, plus Samsung & YouTube ad extensions.
   * **Xiaomi / Mi TV Telemetry & Ads:** Mitigates aggressive PatchWall and MIUI ad injection.
   * **Realme, Oppo & Vivo Telemetry:** Targets ColorOS, RealmeUI, and FuntouchOS tracking endpoints.
+  * **Huawei / Honor Telemetry:** Blocks HarmonyOS and EMUI tracking endpoints.
 * **🛡️ Security & Malware:**
   * **HaGeZi DynDNS:** Blocks abuse of dynamic DNS providers for Command & Control (C2) and phishing.
   * **HaGeZi Anti-Piracy:** Blocks rogue streaming portals and torrent trackers.
+  * **HaGeZi Pop-Up Ads:** Malicious pop-ups, overlays, and push notification spam (effective against Indian news site pop-ups).
+  * **Blocklistproject:** Dedicated lists for Phishing, Scam, Fraud, Malware, and Ransomware protection.
 * **📱 Native OS & Hardware Telemetry:**
-  * Standalone blockers for **Apple**, **Amazon Echo/FireTV**, **Windows 10/11 & Office**, and **TikTok**.
+  * Standalone blockers for **Apple**, **Amazon Echo/FireTV**, **Windows 10/11 & Office**, **TikTok** (standard + extended), and **Huawei**.
 * **📺 Smart TV & IoT Telemetry:**
   * **Perflyst SmartTV:** Multi-vendor Smart TV ad and telemetry blocker (Sony, Roku, Philips, etc.).
   * **mboutolleau Samsung Telemetry:** Targets ACR (Automatic Content Recognition) tracking on Samsung TVs.
 * **⚡ Modern Tracking & Optimization:**
   * **Developer Dan Extended:** Extended trackers and Google AMP redirect stripper.
-  * **1Hosts Lite:** Lightweight, actively maintained modern tracking filter.
+  * **1Hosts Lite + Xtra:** Lightweight and aggressive modern tracking filters.
   * **Dandelion Sprout Game Console AdBlock:** Blocks ads on PlayStation, Xbox, and Nintendo Switch.
+
+### India-Specific Whitelist (`config/india-whitelist.list`)
+* **UPI & Payment Infrastructure:** NPCI, PhonePe, Google Pay, Paytm, Razorpay, Cashfree, BillDesk, Juspay.
+* **Indian Banking:** SBI, HDFC, ICICI, Axis, Kotak, YES Bank, IDFC First, PNB, BOB, Canara, Indian Bank.
+* **Government Services:** Aadhaar/UIDAI, DigiLocker, UMANG, IRCTC, Income Tax, GST, EPFO, ESIC.
+* **E-Commerce:** Flipkart, Myntra, Meesho, Amazon.in, AJIO, Nykaa, JioMart, BigBasket, Blinkit.
+* **Food Delivery & Ride-Hailing:** Swiggy, Zomato, Ola, Uber, Rapido, Dunzo, Zepto.
+* **Telecom Recharge:** Jio, Airtel, Vi, BSNL, ACT Fibernet.
+* **OTT Streaming:** Hotstar, JioCinema, SonyLIV, ZEE5, MX Player, Voot, Eros Now, ALTBalaji.
+
+### India-Specific Regex Rules (`config/india-regex-blacklist.list` & `config/india-regex-whitelist.list`)
+* **Blacklist:** InMobi, Vserv, MoPub ad networks; generic ad-serving, tracking, analytics, and telemetry subdomain patterns.
+* **Whitelist:** Protects `.gov.in`, `.nic.in`, `.ac.in`, `.bank.in`, `.fin.in` domains from false-positive blocking.
 
 ---
 
@@ -124,6 +145,19 @@ sudo bash scripts/configure-conditional-forwarding.sh -y
 sudo bash scripts/configure-conditional-forwarding.sh -r 192.168.1.1 -s 192.168.1.0/24 -d lan
 ```
 
+#### 5. 24/7 MicroSD Card & Hardware Longevity Optimization
+Dramatically extends SD card lifespan and prevents wear-out/corruption on 24/7 Raspberry Pis (especially Pi 4B 4GB) by batching dirty page memory buffers, delaying commit writes, mounting `/var/tmp` in tmpfs, switching systemd-journald to volatile RAM, eliminating SD swap thrashing, and batching Pi-hole database flushes:
+```bash
+# Default: Extreme / Zero-Churn (10m kernel flush, 600s commit, 60m Pi-hole DBinterval)
+sudo bash scripts/optimization/optimize-sd-card.sh -p extreme -y
+
+# Ultra-Endurance (5m flush, 300s commit, 30m Pi-hole DBinterval)
+sudo bash scripts/optimization/optimize-sd-card.sh -p ultra -y
+
+# Check live diagnostics & buffer status without modifying
+bash scripts/optimization/check-hardware-health.sh
+```
+
 ---
 
 ### Option C: Remote Deployment from Windows (PowerShell)
@@ -137,8 +171,11 @@ Deploy remotely from your Windows workstation over SSH using the included script
 # Enable Conditional Forwarding on existing Pi-hole:
 .\deploy.ps1 -Hostname "pi.hole" -User "rpi4b-admin" -ConditionalForwarding
 
-# Complete turnkey setup: Install Pi-hole + Conditional Forwarding + Lists
-.\deploy.ps1 -Hostname "192.168.1.100" -User "pi" -InstallPihole -ConditionalForwarding -InstallUpdateLists -PiholePassword "YourPassword123"
+# Deploy configurations and apply 24/7 SD card longevity optimization:
+.\deploy.ps1 -Hostname "192.168.31.32" -User "rpi4b-admin" -OptimizeSDCard
+
+# Complete turnkey setup: Install Pi-hole + Conditional Forwarding + Lists + SD Card Optimization
+.\deploy.ps1 -Hostname "192.168.1.100" -User "pi" -InstallPihole -ConditionalForwarding -InstallUpdateLists -OptimizeSDCard -PiholePassword "YourPassword123"
 ```
 
 ---
@@ -172,6 +209,10 @@ GDRIVE_SQLITE_QUERY_WHITELISTS="SELECT domain FROM whitelist WHERE active = 1"
 .
 ├── config/
 │   ├── custom-blocklists.list              # Curated adlist index (HaGeZi, India, Smart TV, etc.)
+│   ├── custom-allowlists.list              # Curated allowlist index (HaGeZi URL shortener unblock)
+│   ├── india-whitelist.list                # India-specific whitelist (UPI, Banking, Govt, E-commerce)
+│   ├── india-regex-blacklist.list          # India-specific regex blacklist (InMobi, Vserv, ad patterns)
+│   ├── india-regex-whitelist.list          # India-specific regex whitelist (.gov.in, .nic.in protection)
 │   ├── pihole-cloud-updater.conf.example   # Example config with Google Sheets, GDrive SQLite, and LoL
 │   └── pihole-updatelists.conf             # Backward-compatible pihole-updatelists configuration
 ├── docs/
