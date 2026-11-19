@@ -50,6 +50,7 @@ $configDir = Join-Path $scriptDir "config"
 $scriptsDir = Join-Path $scriptDir "scripts"
 
 $customLists = Join-Path $configDir "custom-blocklists.list"
+$customBlacklist = Join-Path $configDir "custom-blacklist.list"
 $confFile = Join-Path $configDir "pihole-updatelists.conf"
 $cloudConfFile = Join-Path $configDir "pihole-cloud-updater.conf.example"
 $updaterPy = Join-Path $scriptsDir "pihole-cloud-updater.py"
@@ -65,6 +66,7 @@ Write-Host "============================================================" -Foreg
 # 1. Transfer files to /tmp/ via SCP
 Write-Host "[*] Uploading configuration and updater files to ${Hostname}:/tmp/ ..." -ForegroundColor Yellow
 scp $customLists "${User}@${Hostname}:/tmp/custom-blocklists.list"
+if (Test-Path $customBlacklist) { scp $customBlacklist "${User}@${Hostname}:/tmp/custom-blacklist.list" }
 scp $confFile "${User}@${Hostname}:/tmp/pihole-updatelists.conf"
 if (Test-Path $cloudConfFile) { scp $cloudConfFile "${User}@${Hostname}:/tmp/pihole-cloud-updater.conf.example" }
 if (Test-Path $updaterPy) { scp $updaterPy "${User}@${Hostname}:/tmp/pihole-cloud-updater.py" }
@@ -101,10 +103,12 @@ if ($InstallUpdateLists) {
 # Core deployment of configs and updater
 $commands += "sudo mkdir -p /etc/pihole /usr/local/share/pihole-cloud-updater /usr/local/sbin /var/cache/pihole-cloud-updater"
 $commands += "sudo cp /tmp/custom-blocklists.list /etc/pihole/custom-blocklists.list"
+$commands += "(test -f /tmp/custom-blacklist.list && sudo cp /tmp/custom-blacklist.list /etc/pihole/custom-blacklist.list && sudo chmod 644 /etc/pihole/custom-blacklist.list || true)"
 $commands += "sudo cp /tmp/pihole-updatelists.conf /etc/pihole-updatelists.conf"
 $commands += "(test -f /tmp/pihole-cloud-updater.conf.example && sudo cp /tmp/pihole-cloud-updater.conf.example /etc/pihole-cloud-updater.conf || true)"
 $commands += "(test -f /tmp/pihole-cloud-updater.py && sudo cp /tmp/pihole-cloud-updater.py /usr/local/share/pihole-cloud-updater/pihole-cloud-updater.py && sudo chmod 755 /usr/local/share/pihole-cloud-updater/pihole-cloud-updater.py || true)"
 $commands += "(test -f /tmp/pihole-cloud-updater && sudo cp /tmp/pihole-cloud-updater /usr/local/sbin/pihole-cloud-updater && sudo chmod 755 /usr/local/sbin/pihole-cloud-updater || true)"
+$commands += "sudo sqlite3 /etc/pihole/gravity.db `"DELETE FROM adlist WHERE address LIKE '%urlhaus.abuse.ch%';`" 2>/dev/null || true"
 
 # Optional custom password set if Pi-hole is already installed
 if ($PiholePassword -and -not $InstallPihole) {

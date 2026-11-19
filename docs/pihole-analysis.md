@@ -37,15 +37,59 @@ Aggressive filtering can occasionally disrupt crucial Indian services. Our white
 
 ---
 
+## SuperAdBlockTest Handcrafted Blacklist (`/etc/pihole/custom-blacklist.list`)
+
+The following ad servers, cryptojacking scripts, and telemetry endpoints identified by tests such as superadblocktest.com have been added directly to `custom-blacklist.list`:
+
+| Domain | Category | Threat / Function |
+|---|---|---|
+| `adservice.google.com` | Google Ads | Direct ad serving & conversion tracking |
+| `ad.doubleclick.net` | Google / DoubleClick | Web advertising and cross-site tracker |
+| `s.youtube.com` | YouTube Telemetry | Video watch telemetry and beacon tracking |
+| `coinimp.com` | Cryptojacking | In-browser cryptocurrency mining script |
+| `www.coinimp.com` | Cryptojacking | In-browser crypto miner host domain |
+| `track.customer.io` | Telemetry / Tracking | Customer analytics and behavioral event tracking (`/events`) |
+| `dai.google.com` | Google Dynamic Ads | Video ad insertion & stream stitching |
+| `ssl.p.jwpcdn.com` | Video Ad Analytics | JW Player CDN ad and tracking beacon |
+
+> [!NOTE]
+> Pi-hole operates at the DNS resolution layer (FQDN). Blacklisting `track.customer.io` blocks all network requests destined for that domain, including HTTP paths like `/events`, before any connection can be initiated.
+
+---
+
+## Excluded / Purged Defunct Adlists
+
+The following upstream adlists have been shut down or deprecated and are excluded/purged so `pihole -g` does not fail:
+
+| Defunct Adlist Target | Status | Resolution |
+|---|---|---|
+| `https://urlhaus.abuse.ch/downloads/hostfile/` | HTTP 410 Gone (Unreachable) | Filtered via `ADLISTS_EXCLUDE` and purged from `gravity.db` |
+
+---
+
 ## Deployment Status on Pi-hole
 
-The updated custom list and configuration have been transferred to:
-- `/tmp/custom-blocklists.list`
-- `/tmp/pihole-updatelists.conf`
+The updated configuration files and lists include:
+- `config/custom-blocklists.list` -> `/etc/pihole/custom-blocklists.list`
+- `config/custom-blacklist.list` -> `/etc/pihole/custom-blacklist.list`
+- `config/pihole-updatelists.conf` -> `/etc/pihole-updatelists.conf`
+- `config/pihole-cloud-updater.conf.example` -> `/etc/pihole-cloud-updater.conf`
 
-To apply the changes:
+To apply the changes remotely from Windows:
+```powershell
+.\deploy.ps1
+```
+
+Or apply directly on the Pi-hole host:
 ```bash
-sudo cp /tmp/custom-blocklists.list /etc/pihole/custom-blocklists.list
-sudo cp /tmp/pihole-updatelists.conf /etc/pihole-updatelists.conf
+sudo cp config/custom-blacklist.list /etc/pihole/custom-blacklist.list
+sudo cp config/pihole-updatelists.conf /etc/pihole-updatelists.conf
 sudo /usr/local/sbin/pihole-updatelists
+# Or if using pihole-cloud-updater:
+sudo /usr/local/sbin/pihole-cloud-updater
+```
+
+Or add directly via Pi-hole CLI for immediate effect:
+```bash
+sudo pihole -b adservice.google.com ad.doubleclick.net s.youtube.com coinimp.com www.coinimp.com track.customer.io dai.google.com ssl.p.jwpcdn.com
 ```

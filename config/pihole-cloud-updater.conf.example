@@ -62,6 +62,10 @@ https://raw.githubusercontent.com/stevejenkins/pi-hole-lists/main/blocklists.txt
 ;   - gsheet://SPREADSHEET_ID?gid=0&col=URL
 ; GSHEET_BLOCKLISTS="https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit#gid=0 | Blocklist_URL"
 
+; Adlist URLs to explicitly exclude or purge from Pi-hole (e.g. dead, 410 Gone, or unreachable feeds)
+ADLISTS_EXCLUDE="https://urlhaus.abuse.ch/downloads/hostfile/
+http://urlhaus.abuse.ch/downloads/hostfile/"
+
 ; ------------------------------------------------------------------------------
 ; 2. WHITELISTS (Exact Domains)
 ; ------------------------------------------------------------------------------
@@ -76,7 +80,7 @@ https://raw.githubusercontent.com/hagezi/dns-blocklists/main/domains/whitelist-r
 ; 3. BLACKLISTS (Exact Domains)
 ; ------------------------------------------------------------------------------
 ; Handcrafted exact domains to blacklist directly (do not place full blocklists here)
-BLACKLIST_URL=""
+BLACKLIST_URL="/etc/pihole/custom-blacklist.list"
 
 ; Dedicated Google Sheets source for blacklisted domains
 ; GSHEET_BLACKLISTS="https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit#gid=654321 | Domain"

@@ -40,6 +40,7 @@ DEFAULT_CONFIG = {
     "GRAVITY_DB": "/etc/pihole/gravity.db",
     "DOMAINS_GROUP_ID": 0,
     "ADLISTS_GROUP_ID": 0,
+    "ADLISTS_EXCLUDE": "https://urlhaus.abuse.ch/downloads/hostfile/",
     "BLOCKLISTS_URL": "",
     "ALLOWLISTS_URL": "",
     "WHITELIST_URL": "",
@@ -313,6 +314,9 @@ class CloudSourceFetcher:
         start_row = 1 if len(rows) > 1 and not (rows[0][target_col_idx].startswith("http") or "." in rows[0][target_col_idx]) else 0
 
         for row in rows[start_row:]:
+            non_empty = [c.strip() for c in row if c.strip()]
+            if not non_empty or non_empty[0].startswith(("#", "//", ";")):
+                continue
             if len(row) > target_col_idx:
                 val = row[target_col_idx].strip()
                 if val and not val.startswith(("#", "//", ";")):
@@ -629,6 +633,7 @@ class GravitySync:
         delete_obsolete: bool = True,
         adlists_group_id: int = 0,
         domains_group_id: int = 0,
+        excluded_adlists: Optional[Set[str]] = None,
         dry_run: bool = False,
     ):
         self.db_path = db_path
@@ -637,6 +642,7 @@ class GravitySync:
         self.delete_obsolete = delete_obsolete
         self.adlists_group_id = adlists_group_id
         self.domains_group_id = domains_group_id
+        self.excluded_adlists = {u.rstrip("/").lower() for u in (excluded_adlists or set())}
         self.dry_run = dry_run
         self.changes_made = {
             "adlist_added": 0,
@@ -677,6 +683,12 @@ class GravitySync:
                 to_add.append(url)
 
         for url, data in existing_by_url.items():
+            # Always purge explicitly excluded / unreachable adlists from gravity.db
+            if url.rstrip("/").lower() in self.excluded_adlists:
+                logger.info("Purging excluded/unreachable adlist from gravity.db: %s", url)
+                to_remove_ids.append(data["id"])
+                continue
+
             if url not in target_set:
                 is_managed = (self.comment_tag in data["comment"]) if self.require_comment else True
                 if is_managed:
@@ -857,6 +869,7 @@ def trigger_pihole_reload(changes: dict, force_gravity: bool = False):
     if adlists_changed or force_gravity:
         logger.info("Adlists changed (or forced). Updating gravity via 'pihole -g'...")
         subprocess.run(["pihole", "-g"], check=False)
+        subprocess.run(["systemctl", "try-restart", "pihole-gravity-ramcache.service"], check=False)
     elif domains_changed:
         logger.info("Domains changed. Reloading Pi-hole DNS lists...")
         if major_ver >= 6:
@@ -940,9 +953,24 @@ def main():
         sqlite_adlists = fetcher.query_sqlite(gdrive_db, cfg["GDRIVE_SQLITE_QUERY_BLOCKLISTS"])
         all_adlists.extend(sqlite_adlists)
 
-    # Filter invalid URLs for adlists (adlists must be http/https/file)
+    # Excluded adlists (dead, deprecated, or unreachable lists)
+    excluded_adlists: Set[str] = {
+        "https://urlhaus.abuse.ch/downloads/hostfile/",
+        "http://urlhaus.abuse.ch/downloads/hostfile/",
+    }
+    raw_exclude = cfg.get("ADLISTS_EXCLUDE", "")
+    for line in (raw_exclude or "").splitlines():
+        for token in line.split():
+            token = token.strip()
+            if token and not token.startswith(("#", ";", "//")):
+                excluded_adlists.add(token)
+
+    # Filter invalid URLs for adlists and exclude dead/unreachable ones
     valid_adlists = []
     for item in all_adlists:
+        if any(item.rstrip("/").lower() == exc.rstrip("/").lower() for exc in excluded_adlists):
+            logger.info("Excluding dead/unreachable adlist: %s", item)
+            continue
         if item.startswith(("http://", "https://", "file://", "/")):
             valid_adlists.append(item)
         else:
@@ -988,6 +1016,7 @@ def main():
         delete_obsolete=bool(cfg.get("DELETE_OBSOLETE", True)),
         adlists_group_id=int(cfg.get("ADLISTS_GROUP_ID", 0)),
         domains_group_id=int(cfg.get("DOMAINS_GROUP_ID", 0)),
+        excluded_adlists=excluded_adlists,
         dry_run=args.dry_run,
     )
 

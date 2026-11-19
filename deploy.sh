@@ -129,6 +129,14 @@ if [ -f "${CONFIG_DIR}/custom-blocklists.list" ]; then
     sed -i 's/\r$//' /etc/pihole/custom-blocklists.list
 fi
 
+# Deploy custom-blacklist.list
+if [ -f "${CONFIG_DIR}/custom-blacklist.list" ]; then
+    echo "[*] Installing /etc/pihole/custom-blacklist.list..."
+    cp "${CONFIG_DIR}/custom-blacklist.list" /etc/pihole/custom-blacklist.list
+    chmod 644 /etc/pihole/custom-blacklist.list
+    sed -i 's/\r$//' /etc/pihole/custom-blacklist.list
+fi
+
 # Deploy pihole-cloud-updater.conf
 if [ -f "${CONFIG_DIR}/pihole-cloud-updater.conf.example" ] && [ ! -f "/etc/pihole-cloud-updater.conf" ]; then
     echo "[*] Installing /etc/pihole-cloud-updater.conf..."
@@ -143,6 +151,11 @@ if [ -f "${CONFIG_DIR}/pihole-updatelists.conf" ]; then
     cp "${CONFIG_DIR}/pihole-updatelists.conf" /etc/pihole-updatelists.conf
     chmod 644 /etc/pihole-updatelists.conf
     sed -i 's/\r$//' /etc/pihole-updatelists.conf
+fi
+
+# Purge deprecated or dead adlist URLs (e.g. urlhaus.abuse.ch 410 Gone)
+if [ -f "/etc/pihole/gravity.db" ] && command -v sqlite3 >/dev/null 2>&1; then
+    sqlite3 /etc/pihole/gravity.db "DELETE FROM adlist WHERE address LIKE '%urlhaus.abuse.ch%';" 2>/dev/null || true
 fi
 
 # Install systemd timer if available

@@ -1,0 +1,138 @@
+# ==============================================================================
+# Custom Handcrafted Domain Blacklist for Pi-hole
+# Managed via pihole-updatelists / pihole-cloud-updater
+# File location on Pi-hole: /etc/pihole/custom-blacklist.list
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Google Ad Services & Video Telemetry
+# ------------------------------------------------------------------------------
+# Google Ad Service delivery
+adservice.google.com
+
+# DoubleClick Ad Server and conversion tracker (Google)
+ad.doubleclick.net
+
+# YouTube user tracking, video telemetry, and view count beacon
+s.youtube.com
+
+# Google Dynamic Ad Insertion (video ad stitching)
+dai.google.com
+
+# Google video redirector (tested by superadblocktest)
+redirector.googlevideo.com
+
+# ------------------------------------------------------------------------------
+# Cryptojacking / Browser Crypto Miners
+# ------------------------------------------------------------------------------
+# In-browser crypto miner script host
+coinimp.com
+www.coinimp.com
+
+# ------------------------------------------------------------------------------
+# User Tracking & Telemetry Analytics
+# ------------------------------------------------------------------------------
+# Customer.io behavioral tracking endpoint (blocks all sub-paths including /events)
+track.customer.io
+
+# JW Player CDN analytics and tracking beacon
+ssl.p.jwpcdn.com
+
+# Lotame Crowd Control behavioral data collector
+bcp.crwdcntrl.net
+
+# Adobe Advertising Cloud / Audience Manager sync
+sync-tm.everesttech.net
+
+# ContextWeb / PulsePoint ad server and tracker
+contextweb.com
+
+# ------------------------------------------------------------------------------
+# Mobile App Attribution & SDK Telemetry
+# ------------------------------------------------------------------------------
+# AppsFlyer attribution analytics
+app.appsflyer.com
+
+# Adjust mobile app tracking & attribution
+app.adjust.com
+
+# Branch.io deep linking & user attribution tracker
+bnc.lt
+
+# Kochava mobile telemetry & attribution
+control.kochava.com
+
+# ------------------------------------------------------------------------------
+# Social Media Analytics & Telemetry
+# ------------------------------------------------------------------------------
+# Instagram API metrics & telemetry
+i.instagram.com
+
+# Twitter / X conversion and engagement analytics
+analytics.twitter.com
+
+# VK retargeting endpoint (hostname vk.com)
+vk.com
+
+# ------------------------------------------------------------------------------
+# Smart TV & OS Telemetry
+# ------------------------------------------------------------------------------
+# LG webOS Smart TV ad and telemetry firmware endpoint
+ngfts.lge.com
+
+# Windows 10/11 telemetry and diagnostics endpoint
+settings-win.data.microsoft.com
+
+# ------------------------------------------------------------------------------
+# Consent Management Platforms (CMP) & Cookie Trackers
+# ------------------------------------------------------------------------------
+# OneTrust privacy portal tracking
+privacyportal.onetrust.com
+
+# Cookiebot consent tracker & script CDN
+consentcdn.cookiebot.com
+cookiebot.com
+
+# Sourcepoint privacy management CMP tracker
+cdn.privacy-mgmt.com
+
+# Usercentrics CMP tracking endpoint
+app.usercentrics.eu
+
+# ------------------------------------------------------------------------------
+# Affiliate & Redirect Trackers
+# ------------------------------------------------------------------------------
+# Conversant / Commission Junction (CJ) affiliate click trackers
+www.anrdoezrs.net
+www.dpbolvw.net
+www.tkqlhce.com
+
+# Rakuten LinkShare affiliate tracker
+click.linksynergy.com
+
+# Awin affiliate tracking CDN
+www.awin1.com
+
+# Performance Horizon affiliate tracking
+prf.hn
+
+# Pepperjam affiliate network tracking
+t.pepperjamnetwork.com
+
+# Skimlinks / VigLink redirect trackers
+go.skimresources.com
+redirector.skimresources.com
+go.redirectingat.com
+redirect.viglink.com
+
+# ------------------------------------------------------------------------------
+# A/B Testing, Feature Flags & Widget Trackers
+# ------------------------------------------------------------------------------
+# Optimizely experimentation & tracking CDN
+cdn.optimizely.com
+
+# LaunchDarkly client telemetry stream
+clientstream.launchdarkly.com
+
+# Intercom visitor tracking beacon
+widget.intercom.io

@@ -1,0 +1,13 @@
+[Unit]
+Description=Lock Pi-hole Gravity Database and Domains into RAM Cache
+Before=pihole-FTL.service
+After=local-fs.target
+
+[Service]
+Type=forking
+ExecStart=/usr/bin/vmtouch -t -l -d /etc/pihole/gravity.db /etc/pihole/macvendor.db
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

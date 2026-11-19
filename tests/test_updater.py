@@ -264,6 +264,39 @@ class TestGravitySync(unittest.TestCase):
 
         conn.close()
 
+    def test_purge_excluded_adlist(self):
+        # Pre-insert urlhaus into database
+        conn = sqlite3.connect(self.db_path)
+        conn.execute("INSERT INTO adlist (address, enabled, date_added, date_modified, comment) VALUES ('https://urlhaus.abuse.ch/downloads/hostfile/', 1, 1000, 1000, 'Managed by old updater')")
+        conn.commit()
+        conn.close()
+
+        sync = updater.GravitySync(
+            db_path=self.db_path,
+            comment_tag="Managed by pihole-cloud-updater",
+            require_comment=True,
+            delete_obsolete=True,
+            excluded_adlists={"https://urlhaus.abuse.ch/downloads/hostfile/"},
+        )
+
+        sync.execute_sync(
+            adlists=["https://cloud.com/valid-list.txt"],
+            whitelists=[],
+            blacklists=[],
+            regex_whitelists=[],
+            regex_blacklists=[],
+        )
+
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT address FROM adlist")
+        addresses = [r[0] for r in cursor.fetchall()]
+        conn.close()
+
+        # Excluded urlhaus should be purged
+        self.assertNotIn("https://urlhaus.abuse.ch/downloads/hostfile/", addresses)
+        self.assertIn("https://cloud.com/valid-list.txt", addresses)
+
 
 if __name__ == "__main__":
     unittest.main()
