@@ -223,7 +223,6 @@ GDRIVE_SQLITE_QUERY_WHITELISTS="SELECT domain FROM whitelist WHERE active = 1"
 │   ├── install-pihole-updatelists.sh       # Automated pihole-updatelists (jacklul) installer
 │   ├── install.sh                          # Standalone installer for pihole-cloud-updater
 │   ├── configure-conditional-forwarding.sh # Configures router PTR/local forwarding for client names
-│   ├── install-chrome.sh                   # Minimal Chromium browser installer for Pi OS Lite
 │   ├── pihole-cloud-updater.py             # Python 3 engine for cloud list parsing & gravity sync
 │   └── pihole-cloud-updater                # CLI launcher executable
 ├── systemd/
@@ -231,7 +230,6 @@ GDRIVE_SQLITE_QUERY_WHITELISTS="SELECT domain FROM whitelist WHERE active = 1"
 │   └── pihole-cloud-updater.timer          # Systemd daily automation timer (03:30 AM)
 ├── deploy.sh                               # Turnkey deployment script for Linux/Pi
 ├── deploy.ps1                              # Remote deployment script for Windows PowerShell
-├── deploy-chrome.ps1                       # Remote Chromium deployment script for Windows PowerShell
 ├── .gitattributes                          # Enforces Linux LF line-endings for config files
 └── README.md                               # Project documentation
 ```
