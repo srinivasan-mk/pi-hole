@@ -14,7 +14,7 @@ AUTO_YES=false
 INSTALL_PIHOLE_FLAG=false
 
 ENABLE_CF=false
-OPTIMIZE_SD_FLAG=false
+BATCH_DB_FLAG=false
 OPTIMIZE_PROFILE="extreme"
 
 # Parse flags
@@ -32,13 +32,13 @@ while [[ $# -gt 0 ]]; do
             ENABLE_CF=true
             shift
             ;;
-        --optimize-sd)
-            OPTIMIZE_SD_FLAG=true
+        --batch-db|--optimize-sd|--optimize-db)
+            BATCH_DB_FLAG=true
             shift
             ;;
         --profile)
             OPTIMIZE_PROFILE="$2"
-            OPTIMIZE_SD_FLAG=true
+            BATCH_DB_FLAG=true
             shift 2
             ;;
         *)
@@ -218,10 +218,11 @@ if [ "${ENABLE_CF}" = true ] && [ -f "${SCRIPTS_DIR}/configure-conditional-forwa
     bash "${SCRIPTS_DIR}/configure-conditional-forwarding.sh" $([ "${AUTO_YES}" = true ] && echo "-y" || echo "")
 fi
 
-# Optional: Apply SD Card & 24/7 Hardware Longevity Optimizations
-if [ "${OPTIMIZE_SD_FLAG}" = true ] && [ -f "${SCRIPTS_DIR}/optimize-sd-card.sh" ]; then
-    echo "[*] Applying SD card & hardware longevity optimizations (Profile: ${OPTIMIZE_PROFILE})..."
-    bash "${SCRIPTS_DIR}/optimize-sd-card.sh" -p "${OPTIMIZE_PROFILE}" $([ "${AUTO_YES}" = true ] && echo "-y" || echo "")
+# Optional: Apply Pi-hole Database Write Batching
+if [ "${BATCH_DB_FLAG}" = true ] && [ -f "${SCRIPTS_DIR}/apply-pihole-batching.sh" ]; then
+    echo "[*] Applying Pi-hole database write batching (Profile: ${OPTIMIZE_PROFILE})..."
+    bash "${SCRIPTS_DIR}/apply-pihole-batching.sh" "${OPTIMIZE_PROFILE}"
+    echo "[*] Note: For complete host-wide hardware longevity (fstab, kernel writeback, log2ram, watchdog), run cross-cutting/hardware/optimize-sd-card.sh from the companion 'raspberry-pi' repo."
 fi
 
 echo "[+] Configuration files deployed successfully."

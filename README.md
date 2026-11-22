@@ -145,18 +145,22 @@ sudo bash scripts/configure-conditional-forwarding.sh -y
 sudo bash scripts/configure-conditional-forwarding.sh -r 192.168.1.1 -s 192.168.1.0/24 -d lan
 ```
 
-#### 5. 24/7 MicroSD Card & Hardware Longevity Optimization
-Dramatically extends SD card lifespan and prevents wear-out/corruption on 24/7 Raspberry Pis (especially Pi 4B 4GB) by batching dirty page memory buffers, delaying commit writes, mounting `/var/tmp` in tmpfs, switching systemd-journald to volatile RAM, eliminating SD swap thrashing, and batching Pi-hole database flushes:
+#### 5. Pi-hole Database Write Batching & In-RAM Gravity Cache
+Batches Pi-hole FTL query logging to RAM to eliminate constant SQLite writes to storage (`DBinterval` tuning) and locks gravity database in physical RAM:
 ```bash
-# Default: Extreme / Zero-Churn (10m kernel flush, 600s commit, 60m Pi-hole DBinterval)
-sudo bash scripts/optimization/optimize-sd-card.sh -p extreme -y
+# Extreme / Zero-Churn (60m Pi-hole DBinterval, 14-day history)
+sudo bash scripts/apply-pihole-batching.sh extreme
 
-# Ultra-Endurance (5m flush, 300s commit, 30m Pi-hole DBinterval)
-sudo bash scripts/optimization/optimize-sd-card.sh -p ultra -y
+# Ultra-Endurance (30m Pi-hole DBinterval)
+sudo bash scripts/apply-pihole-batching.sh ultra
 
-# Check live diagnostics & buffer status without modifying
-bash scripts/optimization/check-hardware-health.sh
+# Lock gravity.db in RAM via vmtouch (optional systemd service)
+sudo cp systemd/pihole-gravity-ramcache.service /etc/systemd/system/
+sudo systemctl enable --now pihole-gravity-ramcache.service
 ```
+
+> [!NOTE]
+> For host-level operating system and hardware optimizations (ext4 commit=600, Linux kernel dirty page writeback, tmpfs log2ram, UFW firewall, and system watchdogs), see the companion [raspberry-pi](https://github.com/srinivasan-mk/raspberry-pi) repository (`cross-cutting/hardware/`).
 
 ---
 
@@ -171,11 +175,11 @@ Deploy remotely from your Windows workstation over SSH using the included script
 # Enable Conditional Forwarding on existing Pi-hole:
 .\deploy.ps1 -Hostname "pi.hole" -User "rpi4b-admin" -ConditionalForwarding
 
-# Deploy configurations and apply 24/7 SD card longevity optimization:
-.\deploy.ps1 -Hostname "192.168.31.32" -User "rpi4b-admin" -OptimizeSDCard
+# Deploy configurations and apply Pi-hole database write batching:
+.\deploy.ps1 -Hostname "192.168.31.32" -User "rpi4b-admin" -BatchDatabase
 
-# Complete turnkey setup: Install Pi-hole + Conditional Forwarding + Lists + SD Card Optimization
-.\deploy.ps1 -Hostname "192.168.1.100" -User "pi" -InstallPihole -ConditionalForwarding -InstallUpdateLists -OptimizeSDCard -PiholePassword "YourPassword123"
+# Complete turnkey setup: Install Pi-hole + Conditional Forwarding + Lists + Database Batching
+.\deploy.ps1 -Hostname "192.168.1.100" -User "pi" -InstallPihole -ConditionalForwarding -InstallUpdateLists -BatchDatabase -PiholePassword "YourPassword123"
 ```
 
 ---
@@ -223,11 +227,13 @@ GDRIVE_SQLITE_QUERY_WHITELISTS="SELECT domain FROM whitelist WHERE active = 1"
 │   ├── install-pihole-updatelists.sh       # Automated pihole-updatelists (jacklul) installer
 │   ├── install.sh                          # Standalone installer for pihole-cloud-updater
 │   ├── configure-conditional-forwarding.sh # Configures router PTR/local forwarding for client names
+│   ├── apply-pihole-batching.sh            # FTL SQLite database write batching optimizer
 │   ├── pihole-cloud-updater.py             # Python 3 engine for cloud list parsing & gravity sync
 │   └── pihole-cloud-updater                # CLI launcher executable
 ├── systemd/
 │   ├── pihole-cloud-updater.service        # Systemd service unit
-│   └── pihole-cloud-updater.timer          # Systemd daily automation timer (03:30 AM)
+│   ├── pihole-cloud-updater.timer          # Systemd daily automation timer (03:30 AM)
+│   └── pihole-gravity-ramcache.service     # In-memory gravity.db RAM cache via vmtouch
 ├── deploy.sh                               # Turnkey deployment script for Linux/Pi
 ├── deploy.ps1                              # Remote deployment script for Windows PowerShell
 ├── .gitattributes                          # Enforces Linux LF line-endings for config files
